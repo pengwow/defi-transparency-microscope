@@ -1,0 +1,20 @@
+/* EducationPage layout — three columns. */
+
+.dtm-education-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dtm-education-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dtm-education-grid {
+    grid-template-columns: 1fr;
+  }
+}

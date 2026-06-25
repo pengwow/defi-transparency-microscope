@@ -1,0 +1,42 @@
+/* Styles for the Education Glossary. */
+
+.dtm-glossary {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.dtm-glossary-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.dtm-glossary-entry {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.dtm-glossary-term {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+}
+
+.dtm-glossary-def {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: 1.4;
+}
