@@ -10,6 +10,7 @@
 
 @import './variables.css';
 @import './animations.css';
+@import './demo.css';
 
 /* ===== Reset（与 DTM_Demo.html 17 行 1:1 对应） ===== */
 *,
