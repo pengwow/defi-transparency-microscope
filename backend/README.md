@@ -30,11 +30,32 @@ The server listens on `:8000` by default. Hit `GET /api/v1/health` to verify.
 | `pnpm dev` | Run with hot-reload (tsx) |
 | `pnpm build` | Compile TypeScript to `dist/` |
 | `pnpm start` | Run the compiled `dist/server.js` |
+| `pnpm e2e:server` | Boot the offline stub server (no live RPC) for frontend integration tests |
 | `pnpm test` | Run the Vitest suite once |
 | `pnpm test:watch` | Watch-mode tests |
 | `pnpm test:coverage` | Generate v8 coverage report |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint with `@typescript-eslint` |
+
+## Run end-to-end (no mainnet RPC required)
+
+The backend ships an offline stub (`scripts/e2e-server.ts`) that answers
+every `provider.call` / `getLogs` / etc. with realistic canned data —
+handy for frontend integration tests in air-gapped environments:
+
+```bash
+# Terminal 1 — stub backend on :8765
+pnpm e2e:server
+
+# Terminal 2 — frontend integration tests
+cd ../frontend
+INTEGRATION_BACKEND_URL=http://127.0.0.1:8765 pnpm test:integration
+```
+
+For a real mainnet run, set `RPC_URL` in `.env` (defaults to
+`https://eth.llamarpc.com`) and use `pnpm dev` instead. The frontend's
+`HttpAPI` is the same in both modes — only the backend data source
+changes.
 
 ## Layout
 

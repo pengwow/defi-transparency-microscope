@@ -12,12 +12,13 @@ DeFi Transparency Microscope — MVP frontend for analyzing DeFi transactions, p
 ## Scripts
 
 ```bash
-pnpm install      # install dependencies
-pnpm dev          # start dev server
-pnpm test         # run tests
-pnpm typecheck    # tsc --noEmit
-pnpm lint         # eslint
-pnpm build        # production build
+pnpm install         # install dependencies
+pnpm dev             # start dev server
+pnpm test            # run unit tests (excludes integration tests)
+pnpm test:integration  # run HttpAPI integration suite against a live backend
+pnpm typecheck       # tsc --noEmit
+pnpm lint            # eslint
+pnpm build           # production build
 ```
 
 ## Project layout
@@ -66,3 +67,27 @@ load time via Vite env vars:
 Copy `frontend/.env.example` to `frontend/.env.local` and set
 `VITE_USE_BACKEND=true` to run against a live backend; see
 [`backend/README.md`](./backend/README.md) for the server side.
+
+### End-to-end against a live backend
+
+```bash
+# Terminal 1 — stub backend (no mainnet RPC needed; works offline)
+cd backend && pnpm e2e:server         # listens on http://127.0.0.1:8765
+
+# Terminal 2 — frontend integration suite
+cd frontend
+INTEGRATION_BACKEND_URL=http://127.0.0.1:8765 pnpm test:integration
+```
+
+The integration suite (10 tests) talks to a real HTTP server, exercising
+every endpoint of the `DataAPI` contract end-to-end: route layer,
+bigint-as-decimal-string serialisation, and the `HttpAPI` rehydration /
+field-mapping logic. It is excluded from `pnpm test` so the default
+unit-test run stays fast and offline-only.
+
+To point the dev server at the same backend, add to `frontend/.env.local`:
+
+```
+VITE_USE_BACKEND=true
+VITE_BACKEND_URL=http://127.0.0.1:8765
+```
