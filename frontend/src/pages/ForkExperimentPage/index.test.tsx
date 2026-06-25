@@ -1,12 +1,21 @@
 /**
- * Tests for the real ForkExperimentPage (Task 19).
+ * Tests for the rewritten ForkExperimentPage (demo-style 3-col layout).
+ *
+ * Verifies that all 7 panels are present, the ExplainBox contains
+ * "实验切片模式", and the 3-column grid renders correctly.
  */
 
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { ForkExperimentPage } from './index';
 import { useExperimentStore } from '@/store/experimentStore';
 import { useUiStore } from '@/store/uiStore';
+
+// Stub useCanvas to a no-op so jsdom doesn't have to provide a real
+// 2D context for the ForkAmm / ForkSankey canvases.
+vi.mock('@/canvas/useCanvas', () => ({
+  useCanvas: (_drawFn: unknown, _deps: unknown) => ({ ref: { current: null } }),
+}));
 
 vi.mock('@/services/mockApi', () => {
   return {
@@ -14,27 +23,24 @@ vi.mock('@/services/mockApi', () => {
       async runSandwichExperiment() {
         return {
           config: {} as unknown as Record<string, unknown>,
-          results: [
-            { attackerProfit: 0.1, victimLoss: 0.05 },
-            { attackerProfit: 0.12, victimLoss: 0.06 },
-          ],
-          summary: { attackerProfit: 0.11, victimLoss: 0.055, count: 2 },
+          results: [],
+          summary: { attackerProfit: 0, victimLoss: 0, count: 0 },
           durationMs: 1,
         };
       }
       async runIlExperiment() {
         return {
           config: {} as unknown as Record<string, unknown>,
-          results: [{ ilV2: 0.1, ilV3: 0.12, priceRatio: 1.5 }],
-          summary: { ilV2: 0.1, ilV3: 0.12 },
+          results: [],
+          summary: { ilV2: 0, ilV3: 0 },
           durationMs: 1,
         };
       }
       async runAttributionExperiment() {
         return {
           config: {} as unknown as Record<string, unknown>,
-          results: [{ totalE18: 0.5, priceImpact: 0.3, fees: 0.1, gasCost: 0.05, rebates: 0 }],
-          summary: { totalE18: 0.5 },
+          results: [],
+          summary: { totalE18: 0 },
           durationMs: 1,
         };
       }
@@ -42,61 +48,53 @@ vi.mock('@/services/mockApi', () => {
   };
 });
 
-const SCENARIOS = [
-  {
-    id: 'a',
-    name: 'Scenario A',
-    description: 'first',
-    config: { name: 'A', protocol: 'uniswap_v2' as const, reserve0: 1n, reserve1: 1n, fee: 3000, runs: 1 },
-  },
-  {
-    id: 'b',
-    name: 'Scenario B',
-    description: 'second',
-    config: { name: 'B', protocol: 'uniswap_v2' as const, reserve0: 1n, reserve1: 1n, fee: 3000, runs: 1 },
-  },
-];
-
 beforeEach(() => {
   useUiStore.setState({ page: 'fork', mode: 'live', alerts: [], loading: false });
   useExperimentStore.getState().reset();
-  useExperimentStore.getState().loadList(SCENARIOS);
-  useExperimentStore.getState().open('a');
 });
 
 afterEach(() => {
   cleanup();
 });
 
-describe('ForkExperimentPage (real)', () => {
-  it('renders the scenario list and compare view panels', async () => {
+const EXPECTED_PANELS = [
+  'fork-params-panel',
+  'step-controls-panel',
+  'fork-amm-panel',
+  'fork-sankey-panel',
+  'fork-timeline-panel',
+  'quant-results-panel',
+  'fork-conclusion-panel',
+];
+
+describe('ForkExperimentPage (3-column demo)', () => {
+  it('renders all 7 panels', async () => {
     render(<ForkExperimentPage />);
     await waitFor(() => {
-      expect(screen.getByTestId('scenario-list-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('compare-view-panel')).toBeInTheDocument();
+      for (const testId of EXPECTED_PANELS) {
+        expect(screen.getByTestId(testId)).toBeInTheDocument();
+      }
     });
   });
 
-  it('lists the seeded scenarios', async () => {
+  it('renders the explain-box with the "实验切片模式" title', async () => {
     render(<ForkExperimentPage />);
     await waitFor(() => {
-      const panel = screen.getByTestId('scenario-list-panel');
-      expect(panel.textContent).toContain('Scenario A');
-      expect(panel.textContent).toContain('Scenario B');
+      expect(screen.getByText('实验切片模式')).toBeInTheDocument();
     });
   });
 
-  it('switches the opened scenario when a row is clicked', async () => {
+  it('renders the 3-column grid', async () => {
     render(<ForkExperimentPage />);
     await waitFor(() => {
-      expect(screen.getByTestId('scenario-list-items')).toBeInTheDocument();
+      expect(screen.getByTestId('fork-experiment-grid')).toBeInTheDocument();
     });
-    const bButton = screen
-      .getAllByRole('button')
-      .find((b) => b.textContent?.includes('Scenario B'));
-    if (bButton) {
-      fireEvent.click(bButton);
-      expect(useExperimentStore.getState().opened?.id).toBe('b');
-    }
+  });
+
+  it('renders the top-level page container', async () => {
+    render(<ForkExperimentPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('fork-experiment-page')).toBeInTheDocument();
+    });
   });
 });
