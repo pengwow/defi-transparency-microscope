@@ -1,0 +1,3332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DTM v9 | DeFi 透明显微镜 — 链上机理仿真实验室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep:#020408;--bg-mid:#060a14;--bg-surface:#0c1220;--bg-card:#111a2e;--bg-hover:#1a2540;
+    --cyan:#00e5ff;--amber:#ffab40;--coral:#ff5e5e;--lime:#69f0ae;--purple:#b388ff;--blue:#448aff;
+    --ink:#f0f4f8;--sub:#8b9bb4;--muted:#5a6a82;
+    --rule:rgba(139,155,180,0.06);--glow:rgba(0,229,255,0.1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg-deep);color:var(--ink);min-height:100vh;overflow-x:hidden;line-height:1.6}
+
+  /* ===== PARTICLE BACKGROUND ===== */
+  #particleCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+  /* ===== SCANLINE OVERLAY ===== */
+  body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.004) 2px,rgba(0,229,255,0.004) 4px);pointer-events:none;z-index:9998}
+
+  /* ===== LOADING SCREEN ===== */
+  .loading-screen{position:fixed;inset:0;z-index:10000;background:var(--bg-deep);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 1s ease-out}
+  .loading-screen.hidden{opacity:0;pointer-events:none}
+  .loading-logo{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 0 60px rgba(0,229,255,0.3);animation:loadingPulse 2s ease-in-out infinite;margin-bottom:2rem}
+  @keyframes loadingPulse{0%,100%{transform:scale(1);box-shadow:0 0 60px rgba(0,229,255,0.3)}50%{transform:scale(1.05);box-shadow:0 0 80px rgba(0,229,255,0.5)}}
+  .loading-text{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--cyan);text-shadow:0 0 20px rgba(0,229,255,0.3);margin-bottom:1rem;opacity:0;animation:fadeInUp 0.8s ease-out 0.5s forwards}
+  .loading-subtitle{color:var(--muted);font-size:0.9rem;opacity:0;animation:fadeInUp 0.8s ease-out 0.8s forwards}
+  .loading-bar{width:200px;height:3px;background:var(--bg-card);border-radius:2px;margin-top:1.5rem;overflow:hidden;opacity:0;animation:fadeInUp 0.8s ease-out 1s forwards}
+  .loading-bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));width:0%;animation:loadProgress 2s ease-out 1.2s forwards}
+  @keyframes loadProgress{0%{width:0%}50%{width:60%}100%{width:100%}}
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ===== HEADER ===== */
+  .header{display:flex;align-items:center;justify-content:space-between;padding:0.7rem 1.5rem;border-bottom:1px solid var(--rule);background:linear-gradient(180deg,rgba(6,10,20,0.95),transparent);position:sticky;top:0;z-index:100;backdrop-filter:blur(20px);flex-wrap:wrap;gap:0.5rem}
+  .logo{display:flex;align-items:center;gap:0.6rem}
+  .logo-icon{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:1rem;box-shadow:0 0 20px rgba(0,229,255,0.25);animation:logoPulse 3s ease-in-out infinite}
+  @keyframes logoPulse{0%,100%{box-shadow:0 0 20px rgba(0,229,255,0.25)}50%{box-shadow:0 0 30px rgba(0,229,255,0.4)}}
+  .logo-text{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;letter-spacing:0.02em}
+  .logo-text span{color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,0.3)}
+
+  /* ===== DEMO BUTTON ===== */
+  .demo-btn{padding:0.45rem 1rem;border-radius:8px;background:linear-gradient(135deg,rgba(255,94,94,0.15),rgba(255,171,64,0.1));border:1px solid rgba(255,94,94,0.3);color:var(--coral);font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.3s;font-family:'Noto Sans SC',sans-serif;display:flex;align-items:center;gap:0.4rem;animation:demoPulse 2s ease-in-out infinite;white-space:nowrap}
+  @keyframes demoPulse{0%,100%{box-shadow:0 0 6px rgba(255,94,94,0.1)}50%{box-shadow:0 0 16px rgba(255,94,94,0.25)}}
+  .demo-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(255,94,94,0.3)}
+  .demo-btn.playing{background:linear-gradient(135deg,rgba(105,240,174,0.15),rgba(0,229,255,0.1));border-color:rgba(105,240,174,0.3);color:var(--lime);animation:none}
+
+  /* ===== MODE SWITCHER ===== */
+  .mode-bar{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.6rem 1.5rem;background:var(--bg-mid);border-bottom:1px solid var(--rule);position:relative;z-index:1;flex-wrap:wrap}
+  .mode-btn{padding:0.5rem 1.2rem;border-radius:10px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.3s;border:1px solid var(--rule);background:var(--bg-surface);color:var(--sub);font-family:'Noto Sans SC',sans-serif;display:flex;align-items:center;gap:0.4rem;flex:1;justify-content:center;max-width:400px}
+  .mode-btn:hover{border-color:var(--glow)}
+  .mode-btn.active{border-color:var(--cyan);background:rgba(0,229,255,0.08);color:var(--cyan);box-shadow:0 0 20px rgba(0,229,255,0.1)}
+  .mode-indicator{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .mode-btn.active .mode-indicator{background:var(--lime);box-shadow:0 0 8px var(--lime);animation:pdot 1.5s ease-in-out infinite}
+  @keyframes pdot{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  /* ===== NAV ===== */
+  .nav-tabs{display:flex;gap:0.25rem;background:var(--bg-surface);border:1px solid var(--rule);border-radius:9px;padding:0.2rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .nav-tabs::-webkit-scrollbar{display:none}
+  .nav-tab{padding:0.45rem 0.85rem;border-radius:7px;font-size:0.78rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.25s;border:none;background:transparent;font-family:'Noto Sans SC',sans-serif;white-space:nowrap}
+  .nav-tab:hover{color:var(--sub);background:var(--bg-hover)}
+  .nav-tab.active{color:var(--bg-deep);background:linear-gradient(135deg,var(--cyan),var(--purple));font-weight:700;box-shadow:0 2px 10px rgba(0,229,255,0.18)}
+
+  /* ===== PAGE ===== */
+  .page{display:none;animation:fadeIn 0.5s ease-out;position:relative;z-index:1}
+  .page.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+  .container{max-width:1600px;margin:0 auto;padding:1rem 1.5rem}
+  .grid-3{display:grid;grid-template-columns:300px 1fr 340px;gap:1rem}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+  @media(max-width:1200px){.grid-3{grid-template-columns:1fr}.grid-4{grid-template-columns:1fr 1fr}}
+  @media(max-width:768px){.grid-2,.grid-4{grid-template-columns:1fr}.container{padding:0.6rem}.header{padding:0.5rem}.mode-btn{font-size:0.75rem;padding:0.4rem 0.8rem}.nav-tab{padding:0.35rem 0.6rem;font-size:0.7rem}}
+
+  /* ===== PANEL ===== */
+  .panel{background:var(--bg-surface);border:1px solid var(--rule);border-radius:14px;overflow:hidden;backdrop-filter:blur(10px);transition:transform 0.3s,border-color 0.3s}
+  .panel:hover{border-color:rgba(0,229,255,0.08)}
+  .panel-header{padding:0.8rem 1rem;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:0.4rem;font-weight:700;font-size:0.82rem;cursor:pointer}
+  .panel-header .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 5px var(--cyan);animation:pdot 2s ease-in-out infinite}
+  .panel-body{padding:0.9rem}
+  .panel.collapsed .panel-body{display:none}
+  .panel.collapsed .panel-header::after{content:'+';margin-left:auto;color:var(--muted);font-size:1rem}
+  .panel:not(.collapsed) .panel-header::after{content:'−';margin-left:auto;color:var(--muted);font-size:1rem}
+  @media(min-width:769px){.panel-header{cursor:default}.panel-header::after{display:none}.panel.collapsed .panel-body{display:block}}
+
+  /* ===== LIVE BADGE ===== */
+  .live-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.7rem;border-radius:100px;background:rgba(255,94,94,0.08);border:1px solid rgba(255,94,94,0.2);font-size:0.7rem;color:var(--coral);font-family:'JetBrains Mono',monospace;margin-left:auto}
+  .live-badge .pulse{width:6px;height:6px;border-radius:50%;background:var(--coral);animation:livePulse 1s ease-in-out infinite}
+  @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.7)}}
+  @keyframes redAlertPulse{0%,100%{border-color:rgba(255,94,94,0.3);box-shadow:0 0 0 rgba(255,94,94,0)}50%{border-color:rgba(255,94,94,0.6);box-shadow:0 0 20px rgba(255,94,94,0.15)}}
+
+  /* ===== REALTIME CLOCK ===== */
+  .rtc-widget{position:fixed;bottom:1rem;left:1rem;z-index:200;background:var(--bg-card);border:1px solid var(--rule);border-radius:10px;padding:0.5rem 0.8rem;display:flex;align-items:center;gap:0.6rem;backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s}
+  .rtc-widget:hover{opacity:1}
+  .rtc-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:rtcBlink 2s ease-in-out infinite}
+  @keyframes rtcBlink{0%,100%{opacity:1}50%{opacity:0.3}}
+  .rtc-time{font-family:'JetBrains Mono',monospace;font-size:0.85rem;font-weight:700;color:var(--cyan);letter-spacing:0.05em}
+  .rtc-date{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:1px}
+  .rtc-label{font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-left:0.3rem}
+  .rtc-sep{width:1px;height:24px;background:var(--rule);margin:0 0.2rem}
+  @media(max-width:768px){.rtc-widget{bottom:0.5rem;left:0.5rem;padding:0.35rem 0.5rem;gap:0.4rem}.rtc-time{font-size:0.75rem}.rtc-date{font-size:0.6rem}.rtc-sep{height:18px}}
+
+  /* ===== MEMPOOL LANES ===== */
+  .mempool-container{height:320px;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch}
+  .mempool-lane{display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.7rem;border-bottom:1px solid var(--rule);font-size:0.78rem;transition:all 0.3s;position:relative;animation:laneIn 0.4s ease-out}
+  @keyframes laneIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+  .mempool-lane:hover{background:var(--bg-hover)}
+  .mempool-lane.sandwich{border-left:3px solid var(--coral);background:rgba(255,94,94,0.04)}
+  .mempool-lane.arbitrage{border-left:3px solid var(--amber);background:rgba(255,171,64,0.04)}
+  .mempool-lane.normal{border-left:3px solid var(--lime)}
+  .mempool-lane.jit{border-left:3px solid var(--purple);background:rgba(179,136,255,0.04)}
+  .mempool-lane.liquidation{border-left:3px solid var(--blue);background:rgba(68,138,255,0.04)}
+  .mempool-lane .tx-hash{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--muted);min-width:90px}
+  .mempool-lane .tx-type{padding:0.1rem 0.4rem;border-radius:4px;font-size:0.65rem;font-weight:700}
+  .tx-type-sandwich{background:rgba(255,94,94,0.12);color:var(--coral)}
+  .tx-type-arb{background:rgba(255,171,64,0.12);color:var(--amber)}
+  .tx-type-normal{background:rgba(105,240,174,0.1);color:var(--lime)}
+  .tx-type-jit{background:rgba(179,136,255,0.12);color:var(--purple)}
+  .tx-type-liquidation{background:rgba(68,138,255,0.12);color:var(--blue)}
+  .mempool-lane .tx-desc{flex:1;color:var(--sub);font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mempool-lane .tx-gas{font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--amber)}
+  .mempool-lane .tx-time{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);min-width:50px}
+  .mempool-lane .microscope-btn{padding:0.2rem 0.5rem;border-radius:6px;background:var(--cyan);color:var(--bg-deep);font-size:0.65rem;font-weight:700;border:none;cursor:pointer;opacity:0;transition:opacity 0.3s;box-shadow:0 0 8px rgba(0,229,255,0.3)}
+  .mempool-lane:hover .microscope-btn{opacity:1}
+  .microscope-btn:hover{box-shadow:0 0 15px rgba(0,229,255,0.5);transform:scale(1.05)}
+  @media(max-width:768px){.mempool-lane{flex-wrap:wrap;gap:0.3rem}.mempool-lane .tx-desc{width:100%;order:3;margin-top:0.2rem}.mempool-lane .microscope-btn{opacity:1}}
+
+  /* ===== AMM LIVE CURVE ===== */
+  .amm-live-container{position:relative}
+  .price-ticker{position:absolute;top:10px;right:10px;background:rgba(5,8,16,0.85);border:1px solid var(--rule);border-radius:8px;padding:0.5rem 0.8rem;font-family:'JetBrains Mono',monospace;font-size:0.75rem;z-index:10;backdrop-filter:blur(10px)}
+  .price-ticker .label{color:var(--muted);font-size:0.65rem}
+  .price-ticker .value{color:var(--cyan);font-size:0.9rem;font-weight:700;text-shadow:0 0 8px rgba(0,229,255,0.3)}
+  .price-ticker .change{color:var(--lime);font-size:0.7rem}
+
+  /* ===== FLASH ALERT ===== */
+  .flash-alert{position:fixed;top:80px;right:20px;background:var(--bg-surface);border:1px solid var(--coral);border-radius:12px;padding:1rem 1.2rem;max-width:340px;z-index:500;box-shadow:0 10px 40px rgba(255,94,94,0.15);animation:flashIn 0.5s ease-out;display:none;backdrop-filter:blur(16px)}
+  .flash-alert.active{display:block}
+  @keyframes flashIn{from{opacity:0;transform:translateX(40px) scale(0.95)}to{opacity:1;transform:translateX(0) scale(1)}}
+  .flash-alert .title{font-weight:700;color:var(--coral);margin-bottom:0.3rem;font-size:0.9rem;display:flex;align-items:center;gap:0.4rem}
+  .flash-alert .body{font-size:0.8rem;color:var(--sub);margin-bottom:0.6rem;line-height:1.6}
+  .flash-alert .actions{display:flex;gap:0.4rem}
+  .flash-alert button{padding:0.4rem 0.8rem;border-radius:8px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all 0.2s}
+  .flash-btn-primary{background:var(--coral);color:var(--bg-deep);box-shadow:0 2px 10px rgba(255,94,94,0.3)}
+  .flash-btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,94,94,0.4)}
+  .flash-btn-secondary{background:var(--bg-deep);border:1px solid var(--rule);color:var(--sub)}
+  @media(max-width:768px){.flash-alert{left:10px;right:10px;max-width:none;top:70px}}
+
+  /* ===== MICROSCOPE LENS TRANSITION ===== */
+  .lens-transition{position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;overflow:hidden}
+  .lens-transition.active{display:flex}
+  .lens-bg{position:absolute;inset:0;background:var(--bg-deep);opacity:0;transition:opacity 0.8s}
+  .lens-transition.active .lens-bg{opacity:1}
+  .lens-circle{position:absolute;width:60px;height:60px;border-radius:50%;border:3px solid var(--cyan);box-shadow:0 0 40px rgba(0,229,255,0.4),inset 0 0 40px rgba(0,229,255,0.1);transition:all 1.2s cubic-bezier(0.4,0,0.2,1);opacity:0;transform:scale(0.5)}
+  .lens-transition.active .lens-circle{opacity:1;transform:scale(1)}
+  .lens-transition.zooming .lens-circle{width:300vmax;height:300vmax;border-width:1px;box-shadow:0 0 100px rgba(0,229,255,0.2)}
+  .lens-content{position:relative;z-index:10;text-align:center;opacity:0;transition:opacity 0.5s 0.3s}
+  .lens-transition.active .lens-content{opacity:1}
+  .lens-title{font-family:'Playfair Display',serif;font-size:2rem;color:var(--cyan);text-shadow:0 0 20px rgba(0,229,255,0.4);margin-bottom:0.5rem}
+  .lens-subtitle{color:var(--sub);font-size:0.9rem;margin-bottom:2rem}
+  .lens-steps{display:flex;gap:2.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+  .lens-step{text-align:center;opacity:0.3;transition:all 0.6s;transform:translateY(10px)}
+  .lens-step.active{opacity:1;transform:translateY(0)}
+  .lens-step .icon{width:55px;height:55px;border-radius:50%;background:var(--bg-surface);border:2px solid var(--rule);display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 0.5rem;transition:all 0.5s}
+  .lens-step.active .icon{border-color:var(--cyan);box-shadow:0 0 25px rgba(0,229,255,0.25);animation:stepGlow 1.5s ease-in-out infinite}
+  @keyframes stepGlow{0%,100%{box-shadow:0 0 25px rgba(0,229,255,0.25)}50%{box-shadow:0 0 40px rgba(0,229,255,0.4)}}
+  .lens-step .label{font-size:0.75rem;color:var(--sub);font-family:'JetBrains Mono',monospace}
+  .lens-status{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--cyan);min-height:1.5rem}
+  .lens-scanline{position:absolute;inset:0;background:linear-gradient(180deg,transparent 0%,rgba(0,229,255,0.03) 50%,transparent 100%);height:4px;animation:scanMove 2s linear infinite;opacity:0}
+  .lens-transition.active .lens-scanline{opacity:1}
+  @keyframes scanMove{from{transform:translateY(-100vh)}to{transform:translateY(100vh)}}
+
+  /* ===== FORM ===== */
+  .form-group{margin-bottom:0.9rem}
+  .form-label{display:block;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem;font-family:'JetBrains Mono',monospace}
+  .form-input,.form-select{width:100%;background:var(--bg-deep);border:1px solid var(--rule);border-radius:9px;padding:0.55rem 0.8rem;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none;transition:border-color 0.3s,box-shadow 0.3s}
+  .form-input:focus,.form-select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,0.08)}
+  .token-row{display:flex;align-items:center;gap:0.4rem;background:var(--bg-deep);border:1px solid var(--rule);border-radius:9px;padding:0.4rem 0.6rem;cursor:pointer;transition:all 0.2s}
+  .token-row:hover{border-color:var(--glow)}
+  .token-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700}
+  .token-info{flex:1}
+  .token-symbol{font-weight:700;font-size:0.8rem}
+  .swap-arrow{text-align:center;color:var(--cyan);font-size:1rem;margin:0.15rem 0;cursor:pointer;transition:transform 0.3s}
+  .swap-arrow:hover{transform:rotate(180deg)}
+  .btn{width:100%;padding:0.7rem;border:none;border-radius:11px;font-family:'Noto Sans SC',sans-serif;font-weight:700;font-size:0.88rem;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:0.4rem}
+  .btn-primary{background:linear-gradient(135deg,var(--cyan),var(--purple));color:var(--bg-deep);box-shadow:0 4px 16px rgba(0,229,255,0.2)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,229,255,0.3)}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important}
+
+  /* ===== EXPLAIN ===== */
+  .explain-box{background:rgba(0,229,255,0.03);border:1px solid var(--glow);border-radius:12px;padding:0.8rem 1rem;margin-bottom:1rem;font-size:0.82rem;color:var(--sub);line-height:1.7;position:relative;backdrop-filter:blur(8px)}
+  .explain-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);border-radius:12px 12px 0 0;opacity:0.5}
+  .explain-box strong{color:var(--cyan)}
+
+  /* ===== TIMELINE ===== */
+  .timeline{max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .timeline-item{display:flex;gap:0.7rem;padding:0.5rem 0;border-left:2px solid var(--rule);margin-left:6px;padding-left:0.7rem;position:relative;opacity:0;transform:translateX(-8px);animation:slideIn 0.35s ease-out forwards}
+  .timeline-item::before{content:'';position:absolute;left:-5px;top:0.8rem;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+  .timeline-item.active::before{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+  .timeline-item.danger::before{background:var(--coral);box-shadow:0 0 6px var(--coral)}
+  .timeline-item.success::before{background:var(--lime);box-shadow:0 0 6px var(--lime)}
+  .timeline-time{font-family:'JetBrains Mono',monospace;font-size:0.62rem;color:var(--muted);min-width:42px}
+  .timeline-tag{font-family:'JetBrains Mono',monospace;font-size:0.62rem;padding:0.1rem 0.35rem;border-radius:3px;display:inline-block;margin-bottom:0.15rem}
+  .tag-event{background:rgba(0,229,255,0.1);color:var(--cyan)}
+  .tag-danger{background:rgba(255,94,94,0.1);color:var(--coral)}
+  .tag-success{background:rgba(105,240,174,0.1);color:var(--lime)}
+  .tag-jit{background:rgba(179,136,255,0.1);color:var(--purple)}
+  .tag-liquidation{background:rgba(68,138,255,0.1);color:var(--blue)}
+  .timeline-desc{font-size:0.75rem;color:var(--sub)}
+  @keyframes slideIn{to{opacity:1;transform:translateX(0)}}
+
+  /* ===== GAUGE ===== */
+  .risk-gauge{text-align:center;padding:1rem 0}
+  .gauge-circle{width:130px;height:130px;margin:0 auto;position:relative}
+  .gauge-svg{transform:rotate(-90deg)}
+  .gauge-bg{fill:none;stroke:var(--bg-deep);stroke-width:10}
+  .gauge-fill{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1.2s ease-out,stroke 0.4s}
+  .gauge-value{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700}
+  .gauge-label{font-size:0.65rem;color:var(--muted);margin-top:0.3rem;text-transform:uppercase;letter-spacing:0.08em}
+
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.7rem 0}
+  .metric-box{background:var(--bg-deep);border:1px solid var(--rule);border-radius:9px;padding:0.6rem;text-align:center;transition:all 0.3s}
+  .metric-box:hover{border-color:rgba(0,229,255,0.1);transform:translateY(-1px)}
+  .metric-box .val{font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:700;display:block}
+  .metric-box .lbl{font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
+
+  .rec-item{display:flex;align-items:flex-start;gap:0.4rem;padding:0.5rem;background:var(--bg-deep);border:1px solid var(--rule);border-radius:9px;margin-bottom:0.35rem;font-size:0.75rem;color:var(--sub);transition:all 0.25s;cursor:pointer}
+  .rec-item:hover{border-color:var(--glow)}
+  .rec-num{width:16px;height:16px;border-radius:50%;background:var(--cyan);color:var(--bg-deep);font-family:'JetBrains Mono',monospace;font-size:0.6rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ===== CANVAS ===== */
+  .viz-canvas{width:100%;border-radius:10px;background:var(--bg-deep)}
+
+  /* ===== PARAM SLIDER ===== */
+  .param-slider{display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0}
+  .param-slider input[type="range"]{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--bg-deep);outline:none}
+  .param-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--cyan);cursor:pointer;box-shadow:0 0 8px rgba(0,229,255,0.5);transition:transform 0.2s}
+  .param-slider input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+  .param-value{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--cyan);min-width:55px;text-align:right}
+
+  /* ===== REPORT ===== */
+  .report-section{background:var(--bg-deep);border:1px solid var(--rule);border-radius:10px;padding:1rem;margin-bottom:0.8rem}
+  .report-section h4{margin-top:0;margin-bottom:0.6rem;color:var(--cyan);font-size:0.9rem}
+  .report-metric{display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.82rem}
+  .report-metric:last-child{border-bottom:none}
+  .report-metric .label{color:var(--sub)}
+  .report-metric .value{font-family:'JetBrains Mono',monospace;color:var(--ink)}
+
+  /* ===== TRACE ===== */
+  .trace-panel{font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.6;background:var(--bg-deep);border-radius:9px;padding:0.8rem;max-height:250px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .trace-line{display:flex;gap:0.6rem;padding:0.1rem 0}
+  .trace-pc{color:var(--muted);min-width:35px}
+  .trace-op{color:var(--cyan);min-width:55px}
+  .trace-val{color:var(--sub)}
+  .trace-comment{color:var(--muted);margin-left:auto;font-style:italic;font-size:0.68rem}
+
+  /* ===== EXPERIMENT CARDS ===== */
+  .experiment-card{padding:0.7rem;border:1px solid var(--rule);border-radius:10px;margin-bottom:0.5rem;cursor:pointer;transition:all 0.3s;background:var(--bg-deep)}
+  .experiment-card:hover{border-color:var(--glow);transform:translateX(4px)}
+  .experiment-card.active{border-color:var(--cyan);background:rgba(0,229,255,0.04);box-shadow:0 0 15px rgba(0,229,255,0.08)}
+  .experiment-title{font-weight:700;font-size:0.85rem;margin-bottom:0.2rem}
+  .experiment-desc{font-size:0.72rem;color:var(--muted)}
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:var(--bg-deep)}
+  ::-webkit-scrollbar-thumb{background:var(--bg-card);border-radius:2px}
+
+  /* ===== DEMO OVERLAY ===== */
+  .demo-overlay{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg-surface);border:1px solid var(--rule);border-radius:12px;padding:0.6rem 1.2rem;z-index:400;display:none;align-items:center;gap:1rem;backdrop-filter:blur(16px);box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:90vw}
+  .demo-overlay.active{display:flex}
+  .demo-progress{width:200px;height:4px;background:var(--bg-deep);border-radius:2px;overflow:hidden;flex-shrink:0}
+  .demo-progress-bar{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));width:0%;transition:width 0.3s}
+  .demo-text{font-size:0.75rem;color:var(--sub);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+  .demo-skip{padding:0.3rem 0.6rem;border-radius:6px;background:var(--bg-deep);border:1px solid var(--rule);color:var(--muted);font-size:0.7rem;cursor:pointer;font-family:'Noto Sans SC',sans-serif;white-space:nowrap}
+  @media(max-width:768px){.demo-progress{width:120px}.demo-text{font-size:0.65rem}}
+
+  /* ===== MEV TYPE LEGEND ===== */
+  .mev-legend{display:flex;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.6rem}
+  .mev-legend-item{display:flex;align-items:center;gap:0.3rem;font-size:0.7rem;color:var(--muted)}
+  .mev-legend-dot{width:8px;height:8px;border-radius:2px}
+
+  /* ===== ATTACK TYPE CARDS ===== */
+  .attack-card{background:var(--bg-deep);border:1px solid var(--rule);border-radius:12px;padding:1rem;transition:all 0.3s;cursor:pointer}
+  .attack-card:hover{border-color:var(--glow);transform:translateY(-2px)}
+  .attack-card.active{border-color:var(--cyan);box-shadow:0 0 20px rgba(0,229,255,0.08)}
+  .attack-icon{font-size:1.5rem;margin-bottom:0.4rem}
+  .attack-name{font-weight:700;font-size:0.85rem;margin-bottom:0.2rem}
+  .attack-desc{font-size:0.72rem;color:var(--muted);line-height:1.5}
+  .attack-profit{font-family:'JetBrains Mono',monospace;font-size:0.75rem;margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid var(--rule)}
+
+  /* ===== REPORT CHARTS ===== */
+  .chart-container{position:relative;width:100%;height:200px}
+  .chart-legend{display:flex;gap:1rem;justify-content:center;margin-top:0.5rem;flex-wrap:wrap}
+  .chart-legend-item{display:flex;align-items:center;gap:0.3rem;font-size:0.7rem;color:var(--muted)}
+  .chart-legend-dot{width:8px;height:8px;border-radius:50%}
+
+  /* ===== RADAR CHART ===== */
+  .radar-container{width:100%;height:220px;position:relative}
+
+  /* ===== WATERFALL ===== */
+  .waterfall-container{width:100%;height:180px;position:relative}
+
+  /* ===== MOBILE TOUCH SLIDER ===== */
+  @media(max-width:768px){.param-slider input[type="range"]::-webkit-slider-thumb{width:28px;height:28px}}
+
+  /* ===== COLLAPSIBLE ON MOBILE ===== */
+  @media(max-width:768px){
+    .panel-header{cursor:pointer}
+    .panel-header::after{display:block}
+    .panel.collapsed .panel-body{display:none}
+    .mempool-container{height:250px}
+    .lens-title{font-size:1.4rem}
+    .lens-steps{gap:1rem}
+    .lens-step .icon{width:40px;height:40px;font-size:1rem}
+  }
+
+  /* ===== MEMPOOL EXPLOSION CANVAS ===== */
+  #explosionCanvas{position:absolute;top:0;left:0;pointer-events:none;z-index:10}
+
+
+
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">🔬</div>
+  <div class="loading-text">DeFi 透明显微镜</div>
+  <div class="loading-subtitle">正在初始化链上机理仿真实验室...</div>
+  <div class="loading-bar">
+    <div class="loading-bar-fill"></div>
+  </div>
+</div>
+
+<!-- PARTICLE BACKGROUND -->
+<canvas id="particleCanvas"></canvas>
+
+<!-- EXPLOSION CANVAS (over mempool) -->
+<canvas id="explosionCanvas"></canvas>
+
+<!-- FLASH ALERT -->
+<div class="flash-alert" id="flashAlert">
+  <div class="title"><span style="font-size:1.1rem">🚨</span> <span id="flashTitle">采样到三明治策略！</span></div>
+  <div class="body" id="flashBody">Mempool 中 WETH/USDC 出现疑似三明治：前跑买入 → 大额 Swap → 后跑卖出。交易发起方多付 ~0.8% 滑点。</div>
+  <div class="actions">
+    <button class="flash-btn-primary" onclick="enterMicroscope()">🔬 放入显微镜</button>
+    <button class="flash-btn-secondary" onclick="dismissAlert()">忽略</button>
+  </div>
+</div>
+
+<!-- MICROSCOPE LENS TRANSITION -->
+<div class="lens-transition" id="lensTransition">
+  <div class="lens-bg"></div>
+  <div class="lens-circle" id="lensCircle"></div>
+  <div class="lens-scanline"></div>
+  <div class="lens-content">
+    <div class="lens-title">🔬 正在放入显微镜</div>
+    <div class="lens-subtitle">将实时事件转换为可交互的高保真实验切片</div>
+    <div class="lens-steps">
+      <div class="lens-step active" id="ls1"><div class="icon">📡</div><div class="label">CAPTURE</div></div>
+      <div class="lens-step" id="ls2"><div class="icon">🍴</div><div class="label">FORK</div></div>
+      <div class="lens-step" id="ls3"><div class="icon">🔍</div><div class="label">PARSE</div></div>
+      <div class="lens-step" id="ls4"><div class="icon">✨</div><div class="label">READY</div></div>
+    </div>
+    <div class="lens-status" id="lensStatus">正在捕获实时三明治事件...</div>
+  </div>
+</div>
+
+<!-- DEMO OVERLAY -->
+<div class="demo-overlay" id="demoOverlay">
+  <span class="demo-text" id="demoText">准备实验...</span>
+  <div class="demo-progress"><div class="demo-progress-bar" id="demoProgressBar"></div></div>
+  <button class="demo-skip" onclick="stopDemo()">跳过</button>
+</div>
+
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">🔬</div>
+    <div class="logo-text">DeFi <span>透明显微镜</span></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+    <button class="demo-btn" id="demoBtn" onclick="startDemo()">
+      <span>▶</span> 一键实验
+    </button>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-page="live" onclick="switchPage('live')">📡 实时采样</button>
+      <button class="nav-tab" data-page="fork" onclick="switchPage('fork')">🔬 实验切片</button>
+      <button class="nav-tab" data-page="liquidation" onclick="switchPage('liquidation')">⚡ 清算</button>
+      <button class="nav-tab" data-page="lpil" onclick="switchPage('lpil')">🌊 LP/IL</button>
+      <button class="nav-tab" data-page="edu" onclick="switchPage('edu')">🎓 教学实验</button>
+      <button class="nav-tab" data-page="report" onclick="switchPage('report')">📊 报告</button>
+    </div>
+  </div>
+</header>
+
+<!-- REALTIME CLOCK -->
+<div class="rtc-widget" id="rtcWidget">
+  <div class="rtc-dot"></div>
+  <div>
+    <div class="rtc-time" id="rtcTime">--:--:--</div>
+    <div class="rtc-date" id="rtcDate">----/--/--</div>
+  </div>
+  <div class="rtc-sep"></div>
+  <div>
+    <div class="rtc-time" id="rtcBlock">#22180542</div>
+    <div class="rtc-label">Block</div>
+  </div>
+</div>
+
+<!-- MODE BAR -->
+<div class="mode-bar">
+  <button class="mode-btn active" id="modeLive" onclick="switchMode('live')">
+    <span class="mode-indicator"></span>
+    📡 Live 实时采样
+  </button>
+  <button class="mode-btn" id="modeFork" onclick="switchMode('fork')">
+    <span class="mode-indicator"></span>
+    🔬 Fork 实验切片
+  </button>
+</div>
+
+<!-- ==================== PAGE: LIVE ==================== -->
+<div class="page active" id="page-live">
+  <div class="container">
+    <div class="explain-box" style="margin-bottom:1rem;">
+      <strong>实时采样模式</strong>：DTM 通过 WebSocket 直连以太坊节点，实时订阅 Mempool 中的待处理交易。你看到的就是<span style="color:var(--coral)">此刻</span>区块链上正在发生的事。当采样到 MEV 策略 活动时，右上角会弹出标注，你可以一键"放入显微镜"进行深度分析。
+    </div>
+    <div class="grid-3">
+      <!-- LEFT: Mempool -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <div class="dot"></div>
+            Mempool 泳道
+            <span class="live-badge"><span class="pulse"></span>LIVE</span>
+          </div>
+          <div class="panel-body" style="padding:0;">
+            <div class="mev-legend" style="padding:0.5rem 0.7rem 0;">
+              <div class="mev-legend-item"><div class="mev-legend-dot" style="background:var(--coral)"></div>三明治</div>
+              <div class="mev-legend-item"><div class="mev-legend-dot" style="background:var(--amber)"></div>套利</div>
+              <div class="mev-legend-item"><div class="mev-legend-dot" style="background:var(--purple)"></div>JIT</div>
+              <div class="mev-legend-item"><div class="mev-legend-dot" style="background:var(--blue)"></div>清算</div>
+              <div class="mev-legend-item"><div class="mev-legend-dot" style="background:var(--lime)"></div>正常</div>
+            </div>
+            <div class="mempool-container" id="mempoolContainer"></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--amber)"></div>MEV 策略归因</div>
+          <div class="panel-body">
+            <div class="metric-grid" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;">
+              <div class="metric-box"><span class="val" style="color:var(--coral)">3</span><span class="lbl">三明治</span></div>
+              <div class="metric-box"><span class="val" style="color:var(--amber)">7</span><span class="lbl">套利</span></div>
+              <div class="metric-box"><span class="val" style="color:var(--purple)">2</span><span class="lbl">JIT</span></div>
+              <div class="metric-box"><span class="val" style="color:var(--blue)">1</span><span class="lbl">清算</span></div>
+              <div class="metric-box"><span class="val" style="color:var(--lime)">128</span><span class="lbl">正常</span></div>
+            </div>
+            <div style="margin-top:0.6rem;height:8px;background:var(--bg-deep);border-radius:4px;overflow:hidden;display:flex;">
+              <div style="width:2%;background:var(--coral)"></div>
+              <div style="width:5%;background:var(--amber)"></div>
+              <div style="width:1.5%;background:var(--purple)"></div>
+              <div style="width:0.5%;background:var(--blue)"></div>
+              <div style="width:91%;background:var(--lime);opacity:0.3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: AMM Live -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <div class="dot"></div>
+            实时 AMM 曲线 — WETH/USDC
+            <span class="live-badge"><span class="pulse"></span>LIVE</span>
+          </div>
+          <div class="panel-body amm-live-container">
+            <div class="price-ticker">
+              <div class="label">当前价格</div>
+              <div class="value" id="livePrice">2,456.32</div>
+              <div class="change" id="liveChange">+0.12% ▲</div>
+            </div>
+            <canvas id="liveAmmCanvas" class="viz-canvas" height="300"></canvas>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--purple)"></div>实时损益归因</div>
+          <div class="panel-body">
+            <canvas id="pnlCanvas" class="viz-canvas" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Stats -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>网络状态</div>
+          <div class="panel-body">
+            <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem;">
+              <span style="color:var(--sub)">区块高度</span>
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">#22180542</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem;">
+              <span style="color:var(--sub)">Gas Price</span>
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--amber)">8.2 gwei</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem;">
+              <span style="color:var(--sub)">Mempool 待处理</span>
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">141 tx</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:0.4rem 0;font-size:0.8rem;">
+              <span style="color:var(--sub)">WS 延迟</span>
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--lime)">47ms</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--coral)"></div>最近采样</div>
+          <div class="panel-body">
+            <div style="font-size:0.8rem;color:var(--sub);line-height:1.8;">
+              <p><span style="color:var(--coral)">📍 14:32:18</span> 三明治策略 @ WETH/USDC<br><span style="font-size:0.75rem;color:var(--muted)">交易发起方损失 $456 | 策略方利润 $1,240</span></p>
+              <p><span style="color:var(--amber)">⚡ 14:28:05</span> CEX-DEX 套利策略 @ WBTC<br><span style="font-size:0.75rem;color:var(--muted)">利润 $890 | 涉及 Binance 价差</span></p>
+              <p><span style="color:var(--purple)">🎯 14:26:12</span> JIT 流动性 @ UNI<br><span style="font-size:0.75rem;color:var(--muted)">利润 $340 | 瞬间注入+撤出</span></p>
+              <p><span style="color:var(--blue)">💥 14:25:33</span> 清算归因 @ AAVE<br><span style="font-size:0.75rem;color:var(--muted)">利润 $320 | 健康因子 1.02</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: FORK ==================== -->
+<div class="page" id="page-fork">
+  <div class="container">
+    <div class="explain-box" style="margin-bottom:1rem;">
+      <strong>实验切片模式</strong>：从 Live 模式捕获的实时事件已被"冻结"在此。DTM 使用 <span style="color:var(--cyan)">anvil --fork-url</span> 克隆了主网在 Block #22180542 的完整状态。你现在可以在<span style="color:var(--lime)">零风险沙盒</span>中步进执行每一笔交易，观察储备如何变化、谁赚谁亏。
+    </div>
+    <div class="grid-3">
+      <!-- LEFT: Controls -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot"></div>仿真参数</div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label class="form-label">Fork 区块 <span id="forkBlockNumber" style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:0.8rem">#22180542</span></label>
+              <input type="text" class="form-input" value="22180542" readonly style="opacity:0.7">
+            </div>
+            <div class="form-group">
+              <label class="form-label">切片 ID <span id="forkSectionId" style="color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:0.8rem">--</span></label>
+            </div>
+            <div class="form-group">
+              <label class="form-label">交易对</label>
+              <div class="token-row">
+                <div class="token-icon" style="background:linear-gradient(135deg,#627eea,#8c9eff)">Ξ</div>
+                <div class="token-info"><div class="token-symbol">WETH</div></div>
+              </div>
+              <div class="swap-arrow">→</div>
+              <div class="token-row">
+                <div class="token-icon" style="background:linear-gradient(135deg,#2775ca,#6ab7ff)">$</div>
+                <div class="token-info"><div class="token-symbol">USDC</div></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">交易发起方金额</label>
+              <input type="text" class="form-input" value="10 WETH" readonly style="opacity:0.7">
+            </div>
+            <div class="form-group">
+              <label class="form-label">池子深度 (实验变量)</label>
+              <div class="param-slider">
+                <input type="range" min="500" max="10000" value="1000" id="forkDepth" oninput="updateForkViz()">
+                <span class="param-value" id="forkDepthVal">1,000</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">滑点容忍</label>
+              <div class="param-slider">
+                <input type="range" min="1" max="50" value="5" id="forkSlippage" oninput="updateForkViz()">
+                <span class="param-value" id="forkSlippageVal">0.5%</span>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="replayBtn" onclick="replayFork()">
+              <span>▶</span> 重放仿真
+            </button>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>步进控制</div>
+          <div class="panel-body">
+            <div style="display:flex;gap:0.4rem;margin-bottom:0.6rem;">
+              <button class="btn btn-primary" style="flex:1;font-size:0.75rem;padding:0.5rem" onclick="stepFork(0)">步骤 1<br>前跑</button>
+              <button class="btn btn-primary" style="flex:1;font-size:0.75rem;padding:0.5rem" onclick="stepFork(1)">步骤 2<br>交易发起方</button>
+              <button class="btn btn-primary" style="flex:1;font-size:0.75rem;padding:0.5rem" onclick="stepFork(2)">步骤 3<br>后跑</button>
+            </div>
+            <div style="font-size:0.78rem;color:var(--sub);line-height:1.7;">
+              <p><strong style="color:var(--coral)">步骤 1 前跑：</strong>策略方买入 WETH，推高价格</p>
+              <p><strong style="color:var(--cyan)">步骤 2 交易发起方：</strong>你以更高价格成交</p>
+              <p><strong style="color:var(--amber)">步骤 3 后跑：</strong>策略方卖出获利</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: Visualization -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">
+            <div class="dot"></div>
+            AMM 曲线变化
+            <span style="font-size:0.7rem;color:var(--muted);margin-left:auto;font-weight:400">拖动滑块观察池子深度的影响</span>
+          </div>
+          <div class="panel-body">
+            <canvas id="forkAmmCanvas" class="viz-canvas" height="260"></canvas>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--purple)"></div>资金流向</div>
+          <div class="panel-body">
+            <canvas id="forkSankeyCanvas" class="viz-canvas" height="160"></canvas>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)">⏱️ 执行轨迹</div>
+          <div class="panel-body timeline" id="forkTimeline">
+            <div class="timeline-item" style="animation-delay:0s">
+              <div class="timeline-time">--</div>
+              <div class="timeline-content">
+                <div class="timeline-tag tag-event">[就绪]</div>
+                <div class="timeline-desc">点击"重放仿真"或选择 Step 查看每一步的详细执行...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--purple)"></div>量化结果</div>
+          <div class="panel-body">
+            <div class="risk-gauge">
+              <div class="gauge-circle">
+                <svg class="gauge-svg" width="130" height="130" viewBox="0 0 130 130">
+                  <circle class="gauge-bg" cx="65" cy="65" r="55"/>
+                  <circle class="gauge-fill" id="forkGaugeFill" cx="65" cy="65" r="55" stroke="var(--coral)" stroke-dasharray="346" stroke-dashoffset="346"/>
+                </svg>
+                <div class="gauge-value" id="forkGaugeValue">--</div>
+              </div>
+              <div class="gauge-label">策略方利润 / 池子深度</div>
+            </div>
+            <div class="metric-grid">
+              <div class="metric-box"><span class="val" id="forkAttackerProfit" style="color:var(--coral)">$1,240</span><span class="lbl">策略方利润</span></div>
+              <div class="metric-box"><span class="val" id="forkUserLoss" style="color:var(--coral)">$456</span><span class="lbl">交易发起方损失</span></div>
+              <div class="metric-box"><span class="val" id="forkLPFee" style="color:var(--lime)">$28</span><span class="lbl">LP 手续费</span></div>
+              <div class="metric-box"><span class="val" id="forkValidator" style="color:var(--amber)">$185</span><span class="lbl">Validator Tip</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--cyan)"></div>实验结论</div>
+          <div class="panel-body" id="forkConclusion" style="font-size:0.82rem;color:var(--sub);line-height:1.8;">
+            <p>当前池子深度 <strong style="color:var(--cyan)">1,000 WETH</strong>，策略方利润 <strong style="color:var(--coral)">$1,240</strong>。</p>
+            <p>试试把池子深度拖到 <strong style="color:var(--lime)">5,000 WETH</strong>——策略方利润会骤降至约 <strong style="color:var(--lime)">$248</strong>。</p>
+            <p>这就是<span style="color:var(--lime)">"深池子天然抗 MEV"</span>的原理：同样的交易金额，对深池子的价格冲击更小，策略方可提取的价值也更少。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: EDU ==================== -->
+<div class="page" id="page-edu">
+  <div class="container">
+    <div class="explain-box" style="margin-bottom:1rem;">
+      <strong>教学实验室</strong>：在这里你可以像做物理实验一样，调整参数观察 AMM 曲线的实时变化。理解"为什么大额交易容易遭受策略博弈"、"为什么深池子更具鲁棒性"。
+    </div>
+    <div class="grid-3">
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>选择场景</div>
+          <div class="panel-body">
+            <div class="experiment-card active" onclick="loadEdu('sandwich',this)">
+              <div class="experiment-title" style="color:var(--coral)">🥪 三明治策略</div>
+              <div class="experiment-desc">策略方前后夹击你的交易</div>
+            </div>
+            <div class="experiment-card" onclick="loadEdu('frontrun',this)">
+              <div class="experiment-title" style="color:var(--amber)">⚡ 抢跑策略</div>
+              <div class="experiment-desc">付更高 Gas 插队到你前面</div>
+            </div>
+            <div class="experiment-card" onclick="loadEdu('liquidity',this)">
+              <div class="experiment-title" style="color:var(--purple)">🌊 流动性操纵</div>
+              <div class="experiment-desc">临时注入/撤走资金改变价格</div>
+            </div>
+            <div class="experiment-card" onclick="loadEdu('jit',this)">
+              <div class="experiment-title" style="color:var(--purple)">🎯 JIT 流动性</div>
+              <div class="experiment-desc">瞬间注入赚取手续费后撤出</div>
+            </div>
+            <div class="experiment-card" onclick="loadEdu('liquidation',this)">
+              <div class="experiment-title" style="color:var(--blue)">💥 清算归因</div>
+              <div class="experiment-desc">利用抵押不足的头寸获利</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--amber)"></div>调整参数</div>
+          <div class="panel-body">
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">交易金额</span><input type="range" min="1" max="100" value="10" id="eduAmount" oninput="updateEdu()"><span class="param-value" id="eduAmountVal">10</span></div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">池子深度</span><input type="range" min="100" max="10000" value="1000" id="eduDepth" oninput="updateEdu()"><span class="param-value" id="eduDepthVal">1,000</span></div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">滑点容忍</span><input type="range" min="1" max="50" value="5" id="eduSlippage" oninput="updateEdu()"><span class="param-value" id="eduSlippageVal">0.5%</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">📊 实时曲线</div>
+          <div class="panel-body">
+            <canvas id="eduAmmCanvas" class="viz-canvas" height="260"></canvas>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)">💡 原理讲解</div>
+          <div class="panel-body" id="eduExplain" style="font-size:0.82rem;color:var(--sub);line-height:1.8">
+            <p><strong style="color:var(--cyan)">三明治策略</strong>就像排队买咖啡时有人插队：他先买了最后一杯，然后立刻高价转卖给你。</p>
+            <p>在区块链上，你的交易进入"等待区"（Mempool），机器人看到后立刻在你前后各插一笔交易。</p>
+            <p>试试拖动"交易金额"滑块——金额越大，红色点偏离绿色点越远，说明你亏得越多。</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--coral)"></div>实时数据</div>
+          <div class="panel-body">
+            <div class="metric-grid" style="grid-template-columns:1fr">
+              <div class="metric-box"><span class="val" id="eduSlip" style="color:var(--coral)">2.4%</span><span class="lbl">你的滑点</span></div>
+              <div class="metric-box"><span class="val" id="eduProfit" style="color:var(--amber)">$1,240</span><span class="lbl">策略方利润</span></div>
+              <div class="metric-box"><span class="val" id="eduLoss" style="color:var(--coral)">$456</span><span class="lbl">你亏了多少</span></div>
+              <div class="metric-box"><span class="val" id="eduImpact" style="color:var(--purple)">1.9%</span><span class="lbl">价格冲击</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem;">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>防御策略</div>
+          <div class="panel-body">
+            <div class="rec-item"><div class="rec-num">1</div><div>用 Flashbots Protect — 走"VIP 通道"</div></div>
+            <div class="rec-item"><div class="rec-num">2</div><div>拆大额成小额 — 机器人不感兴趣</div></div>
+            <div class="rec-item"><div class="rec-num">3</div><div>选更深的池子 — 影响更小</div></div>
+            <div class="rec-item"><div class="rec-num">4</div><div>设严格滑点 — 超限自动取消</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: LIQUIDATION ==================== -->
+<div class="page" id="page-liquidation">
+  <div class="container">
+    <!-- LIQ MODE SWITCHER -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.8rem">
+      <button class="mode-btn active" id="liqModePanorama" onclick="switchLiqMode('panorama')">
+        <span class="mode-indicator"></span> 🛰️ 全链机理广播 — 全链观测
+      </button>
+      <button class="mode-btn" id="liqModeFocus" onclick="switchLiqMode('focus')">
+        <span class="mode-indicator"></span> 🔬 单地址归因 — 单地址
+      </button>
+    </div>
+
+    <!-- ====== MODE A: PANORAMA ====== -->
+    <div id="liqPanoramaView">
+      <div class="explain-box" style="margin-bottom:0.8rem;">
+        <strong>全链机理广播</strong>：WS 订阅全链 <code style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:0.8rem">LiquidationCall</code> + <code style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:0.8rem">Swap/Sync</code> + <code style="color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:0.8rem">Chainlink AnswerUpdated</code>，像气象卫星看风暴云一样看见"此刻链上正在发生什么"。
+      </div>
+      <div class="grid-3">
+        <!-- LEFT: Liquidation Heatmap -->
+        <div>
+          <div class="panel">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--coral)"></div>全链清算归因热力图 <span class="live-badge"><span class="pulse"></span>LIVE</span></div>
+            <div class="panel-body">
+              <canvas id="liqHeatmapCanvas" class="viz-canvas" height="280"></canvas>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--amber)"></div>协议清算统计</div>
+            <div class="panel-body">
+              <div class="metric-grid" style="grid-template-columns:1fr 1fr">
+                <div class="metric-box"><span class="val" style="color:var(--coral);font-size:1.1rem" id="liqPanTotalCount">47</span><span class="lbl">24h 清算笔数</span></div>
+                <div class="metric-box"><span class="val" style="color:var(--amber);font-size:1.1rem" id="liqPanTotalValue">$12.4M</span><span class="lbl">24h 清算总额</span></div>
+                <div class="metric-box"><span class="val" style="color:var(--cyan);font-size:1.1rem" id="liqPanWhaleCount">3</span><span class="lbl">巨鲸清算 (>$1M)</span></div>
+                <div class="metric-box"><span class="val" style="color:var(--purple);font-size:1.1rem" id="liqPanAvgHF">0.97</span><span class="lbl">平均清算 HF</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- MIDDLE: Mempool Pending + AMM Disturbance -->
+        <div>
+          <div class="panel">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--amber)"></div>待归因 Mempool <span class="live-badge"><span class="pulse"></span>LIVE</span></div>
+            <div class="panel-body">
+              <div id="liqMempoolContainer" style="height:200px;overflow-y:auto">
+                <!-- Dynamic pending liquidations -->
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--purple)"></div>AMM 机理扰动图</div>
+            <div class="panel-body">
+              <canvas id="liqAmmMapCanvas" class="viz-canvas" height="200"></canvas>
+              <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem;text-align:center">大 swap 触发红圈脉冲，池子 x·y=k 被扰动</div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT: Recent Liquidations -->
+        <div>
+          <div class="panel">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>最近清算归因事件</div>
+            <div class="panel-body" id="liqRecentEvents" style="max-height:520px;overflow-y:auto">
+              <!-- Dynamic events -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== MODE B: FOCUS (Microscope) ====== -->
+    <div id="liqFocusView" style="display:none">
+      <div class="explain-box" style="margin-bottom:0.8rem;">
+        <strong>单地址归因</strong>：输入任意地址（自己的 / 巨鲸的 / 临近清算的），DTM 从全链事件流中 filter 该地址的头寸，实时计算 HF，预测清算距离。
+      </div>
+      <div class="grid-3">
+        <!-- LEFT: Address Input + Position -->
+        <div>
+          <div class="panel">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--cyan)"></div>地址输入</div>
+            <div class="panel-body">
+              <div style="position:relative">
+                <input type="text" id="liqFocusAddress" value="0xAlice...3f8E" placeholder="输入地址或选择预设..." style="width:100%;padding:0.55rem 0.7rem;background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none" onfocus="this.style.borderColor='var(--cyan)'" onblur="this.style.borderColor='var(--rule)'">
+                <button onclick="loadFocusAddress()" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:0.3rem 0.6rem;background:var(--cyan);color:var(--bg-deep);border:none;border-radius:6px;font-size:0.75rem;cursor:pointer;font-weight:700">对焦</button>
+              </div>
+              <div style="margin-top:0.5rem;display:flex;gap:0.3rem;flex-wrap:wrap">
+                <button onclick="setFocusPreset('whale')" style="padding:0.25rem 0.5rem;border:1px solid var(--rule);background:var(--bg-card);color:var(--amber);border-radius:5px;font-size:0.7rem;cursor:pointer;font-family:'Noto Sans SC',sans-serif">🐋 巨鲸</button>
+                <button onclick="setFocusPreset('danger')" style="padding:0.25rem 0.5rem;border:1px solid var(--rule);background:var(--bg-card);color:var(--coral);border-radius:5px;font-size:0.7rem;cursor:pointer;font-family:'Noto Sans SC',sans-serif">📍 临近清算</button>
+                <button onclick="setFocusPreset('safe')" style="padding:0.25rem 0.5rem;border:1px solid var(--rule);background:var(--bg-card);color:var(--lime);border-radius:5px;font-size:0.7rem;cursor:pointer;font-family:'Noto Sans SC',sans-serif">✅ 安全头寸</button>
+                <button onclick="setFocusPreset('liquidated')" style="padding:0.25rem 0.5rem;border:1px solid var(--rule);background:var(--bg-card);color:var(--muted);border-radius:5px;font-size:0.7rem;cursor:pointer;font-family:'Noto Sans SC',sans-serif">💀 已清算</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--blue)"></div>仿真参数</div>
+            <div class="panel-body">
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">抵押 ETH</span><input type="range" min="1" max="100" value="10" id="liqCollateral" oninput="updateLiq()"><span class="param-value" id="liqCollateralVal">10 ETH</span></div>
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">借款 USDC</span><input type="range" min="1000" max="30000" value="15000" id="liqDebt" oninput="updateLiq()"><span class="param-value" id="liqDebtVal">$15,000</span></div>
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">ETH 价格</span><input type="range" min="800" max="4000" value="2600" id="liqPrice" oninput="updateLiq()"><span class="param-value" id="liqPriceVal" style="color:var(--cyan)">$2,600</span></div>
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">清算奖励</span><input type="range" min="5" max="10" value="8" id="liqBonus" oninput="updateLiq()"><span class="param-value" id="liqBonusVal">8%</span></div>
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">LTV 上限</span><input type="range" min="50" max="85" value="80" id="liqLtv" oninput="updateLiq()"><span class="param-value" id="liqLtvVal">80%</span></div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--coral)"></div>实验控制</div>
+            <div class="panel-body">
+              <button class="btn btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="simulateLiqCrash()">📉 ETH 崩盘仿真实验</button>
+              <button class="btn" style="width:100%;margin-bottom:0.5rem;border:1px solid var(--rule);color:var(--sub);background:var(--bg-card);padding:0.5rem;border-radius:8px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;font-size:0.8rem" onclick="executeLiquidation()">🔨 运行清算归因</button>
+              <button class="btn" style="width:100%;border:1px solid var(--rule);color:var(--sub);background:var(--bg-card);padding:0.5rem;border-radius:8px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;font-size:0.8rem" onclick="resetLiq()">↺ 重置</button>
+            </div>
+          </div>
+        </div>
+        <!-- MIDDLE: HF Gauge + Curve + Alert -->
+        <div>
+          <!-- RED ALERT BANNER -->
+          <div id="liqRedAlert" style="display:none;margin-bottom:0.7rem;padding:0.7rem 1rem;background:rgba(255,94,94,0.1);border:1px solid rgba(255,94,94,0.3);border-radius:10px;animation:redAlertPulse 1.5s ease-in-out infinite">
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <span style="font-size:1.2rem">🚨</span>
+              <div>
+                <div style="font-weight:700;color:var(--coral);font-size:0.85rem" id="liqAlertTitle">清算预警</div>
+                <div style="font-size:0.78rem;color:var(--sub)" id="liqAlertDesc">HF < 1.05，再跌 5% 即触发归因</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header" onclick="togglePanel(this)">📊 单地址 HF 归因仪表</div>
+            <div class="panel-body" style="text-align:center">
+              <canvas id="liqGaugeCanvas" class="viz-canvas" height="200"></canvas>
+              <div style="margin-top:0.5rem">
+                <span style="font-size:2rem;font-weight:900;font-family:'JetBrains Mono',monospace" id="liqHFDisplay">1.39</span>
+                <span style="font-size:0.8rem;color:var(--muted);margin-left:0.3rem">Health Factor</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)">📈 价格 vs HF 曲线</div>
+            <div class="panel-body">
+              <canvas id="liqCurveCanvas" class="viz-canvas" height="220"></canvas>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)">⏱️ 清算时间线</div>
+            <div class="panel-body">
+              <div class="timeline" id="liqTimeline">
+                <div class="timeline-item"><span class="tl-time">T+0</span><span class="tl-tag tag-event">初始</span><span class="tl-desc">用户存入 10 ETH，借出 $15,000 USDC</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT: Position Details + PnL -->
+        <div>
+          <div class="panel">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--coral)"></div>清算归因</div>
+            <div class="panel-body">
+              <div class="metric-grid" style="grid-template-columns:1fr">
+                <div class="metric-box"><span class="val" id="liqUserLoss" style="color:var(--coral)">$0</span><span class="lbl">用户总损失</span></div>
+                <div class="metric-box"><span class="val" id="liqLiquidatorProfit" style="color:var(--amber)">$0</span><span class="lbl">清算人利润</span></div>
+                <div class="metric-box"><span class="val" id="liqProtocolFee" style="color:var(--purple)">$0</span><span class="lbl">协议罚金</span></div>
+                <div class="metric-box"><span class="val" id="liqBadDebtAvoided" style="color:var(--lime)">$0</span><span class="lbl">协议坏账避免</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--cyan)"></div>头寸详情</div>
+            <div class="panel-body">
+              <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">抵押品价值</span><span style="font-family:'JetBrains Mono',monospace;color:var(--cyan)" id="liqCollateralValue">$26,000</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">债务价值</span><span style="font-family:'JetBrains Mono',monospace;color:var(--coral)" id="liqDebtValue">$15,000</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">最大可借</span><span style="font-family:'JetBrains Mono',monospace;color:var(--amber)" id="liqMaxBorrow">$20,800</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">清算阈值</span><span style="font-family:'JetBrains Mono',monospace;color:var(--coral)" id="liqLiquidationPrice">$1,875</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">清算距离</span><span style="font-family:'JetBrains Mono',monospace" id="liqClearance">↓8.5%</span></div>
+              <div style="display:flex;justify-content:space-between;padding:0.35rem 0;font-size:0.8rem"><span style="color:var(--sub)">安全缓冲</span><span style="font-family:'JetBrains Mono',monospace" id="liqBuffer">39%</span></div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:0.7rem">
+            <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>💡 原理讲解</div>
+            <div class="panel-body" style="font-size:0.82rem;color:var(--sub);line-height:1.8">
+              <p><strong style="color:var(--cyan)">健康因子 HF</strong> = (抵押品价值 x 抵押因子) / 债务价值。HF > 1 安全，HF ≤ 1 触发归因。</p>
+              <p>当 ETH 价格暴跌（如 2600→1800），抵押品价值缩水，HF 骤降。清算人趁机以 <strong style="color:var(--amber)">折扣价</strong> 拿走 ETH，替你还债并赚取奖励。</p>
+              <p>拖动"ETH 价格"滑块到清算阈值以下，然后点击"运行清算归因"观察全过程。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: LP/IL ==================== -->
+<div class="page" id="page-lpil">
+  <div class="container">
+    <div class="explain-box" style="margin-bottom:1rem;">
+      <strong>LP/IL 显微镜</strong>：本地分叉 Uniswap V2/V3 池子状态，仿真 LP 存币 → 价格变动 → 无常损失 IL 的全过程。对比 V2 全范围和 V3 集中流动性，观察手续费收入能否覆盖 IL。
+    </div>
+    <div class="grid-3">
+      <!-- LEFT: Parameters -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--purple)"></div>仿真参数</div>
+          <div class="panel-body">
+            <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.6rem;font-family:'JetBrains Mono',monospace">LP Position: WETH/USDC</div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">存入 ETH</span><input type="range" min="1" max="50" value="10" id="lpAmount" oninput="updateLP()"><span class="param-value" id="lpAmountVal">10 ETH</span></div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">初始价格</span><input type="range" min="1000" max="5000" value="2500" id="lpInitPrice" oninput="updateLP()"><span class="param-value" id="lpInitPriceVal">$2,500</span></div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">当前价格</span><input type="range" min="500" max="8000" value="2500" id="lpCurrentPrice" oninput="updateLP()"><span class="param-value" id="lpCurrentPriceVal" style="color:var(--cyan)">$2,500</span></div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">手续费率</span><input type="range" min="1" max="100" value="30" id="lpFee" oninput="updateLP()"><span class="param-value" id="lpFeeVal">0.30%</span></div>
+            <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">交易量</span><input type="range" min="1" max="100" value="50" id="lpVolume" oninput="updateLP()"><span class="param-value" id="lpVolumeVal">$50M</span></div>
+            <div style="margin-top:0.6rem;padding:0.5rem;background:var(--bg-card);border-radius:8px;border:1px solid var(--rule)">
+              <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.4rem">AMM 版本</div>
+              <div style="display:flex;gap:0.4rem">
+                <button class="btn" id="lpV2Btn" onclick="switchLPVersion('v2')" style="flex:1;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--cyan);background:rgba(0,229,255,0.1);color:var(--cyan);font-family:'Noto Sans SC',sans-serif;font-weight:700">V2</button>
+                <button class="btn" id="lpV3Btn" onclick="switchLPVersion('v3')" style="flex:1;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--rule);background:var(--bg-card);color:var(--muted);font-family:'Noto Sans SC',sans-serif">V3</button>
+              </div>
+            </div>
+            <div id="lpV3Params" style="display:none;margin-top:0.6rem">
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">价格下限</span><input type="range" min="500" max="4000" value="1800" id="lpTickLower" oninput="updateLP()"><span class="param-value" id="lpTickLowerVal">$1,800</span></div>
+              <div class="param-slider"><span style="font-size:0.78rem;min-width:70px">价格上限</span><input type="range" min="1500" max="8000" value="3500" id="lpTickUpper" oninput="updateLP()"><span class="param-value" id="lpTickUpperVal">$3,500</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--amber)"></div>快速场景</div>
+          <div class="panel-body">
+            <button class="btn" style="width:100%;margin-bottom:0.4rem;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--rule);background:var(--bg-card);color:var(--sub);font-family:'Noto Sans SC',sans-serif" onclick="lpScenario('2x')">📈 ETH 涨 2x</button>
+            <button class="btn" style="width:100%;margin-bottom:0.4rem;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--rule);background:var(--bg-card);color:var(--sub);font-family:'Noto Sans SC',sans-serif" onclick="lpScenario('0.5x')">📉 ETH 跌 50%</button>
+            <button class="btn" style="width:100%;margin-bottom:0.4rem;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--rule);background:var(--bg-card);color:var(--sub);font-family:'Noto Sans SC',sans-serif" onclick="lpScenario('5x')">🚀 ETH 涨 5x</button>
+            <button class="btn" style="width:100%;padding:0.4rem;border-radius:6px;font-size:0.75rem;cursor:pointer;border:1px solid var(--rule);background:var(--bg-card);color:var(--sub);font-family:'Noto Sans SC',sans-serif" onclick="lpScenario('0.2x')">💀 ETH 跌 80%</button>
+          </div>
+        </div>
+      </div>
+      <!-- MIDDLE: Visualization -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)">📊 IL 机理曲线</div>
+          <div class="panel-body">
+            <canvas id="lpILCanvas" class="viz-canvas" height="260"></canvas>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem">
+          <div class="panel-header" onclick="togglePanel(this)">💰 IL-费 归因盈亏</div>
+          <div class="panel-body">
+            <canvas id="lpPnlCanvas" class="viz-canvas" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+      <!-- RIGHT: Results -->
+      <div>
+        <div class="panel">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--coral)"></div>无常损失</div>
+          <div class="panel-body">
+            <div class="metric-grid" style="grid-template-columns:1fr">
+              <div class="metric-box"><span class="val" id="lpILPct" style="color:var(--coral)">0.00%</span><span class="lbl">IL 百分比</span></div>
+              <div class="metric-box"><span class="val" id="lpHoldValue" style="color:var(--lime)">$50,000</span><span class="lbl">简单持有 (HODL)</span></div>
+              <div class="metric-box"><span class="val" id="lpLPValue" style="color:var(--cyan)">$50,000</span><span class="lbl">LP 当前价值</span></div>
+              <div class="metric-box"><span class="val" id="lpFeeIncome" style="color:var(--amber)">$0</span><span class="lbl">累计手续费收入</span></div>
+              <div class="metric-box"><span class="val" id="lpNetPnl" style="color:var(--lime)">$0</span><span class="lbl">净盈亏 (LP - HODL)</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--purple)"></div>池子状态</div>
+          <div class="panel-body">
+            <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">价格比率 r</span><span style="font-family:'JetBrains Mono',monospace;color:var(--cyan)" id="lpRatio">1.00x</span></div>
+            <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">IL 公式</span><span style="font-family:'JetBrains Mono',monospace;color:var(--purple);font-size:0.7rem">2√r/(1+r)-1</span></div>
+            <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--rule);font-size:0.8rem"><span style="color:var(--sub)">V3 集中倍数</span><span style="font-family:'JetBrains Mono',monospace;color:var(--amber)" id="lpConcentration">-</span></div>
+            <div style="display:flex;justify-content:space-between;padding:0.35rem 0;font-size:0.8rem"><span style="color:var(--sub)">盈亏平衡交易量</span><span style="font-family:'JetBrains Mono',monospace" id="lpBreakEven">-</span></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:0.7rem">
+          <div class="panel-header" onclick="togglePanel(this)"><div class="dot" style="background:var(--lime)"></div>💡 原理讲解</div>
+          <div class="panel-body" style="font-size:0.82rem;color:var(--sub);line-height:1.8" id="lpExplain">
+            <p><strong style="color:var(--cyan)">无常损失 IL</strong> = 2√r/(1+r) - 1，r = 当前价格/初始价格。</p>
+            <p>IL 是<strong style="color:var(--coral)">对称的</strong>：涨 2x 和跌 50% 的 IL 完全相同（约 5.72%）。</p>
+            <p>拖动"当前价格"滑块观察 IL 变化。手续费收入能否覆盖 IL？看"净盈亏"指标。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: REPORT ==================== -->
+<div class="page" id="page-report">
+  <div class="container">
+    <div class="explain-box" style="margin-bottom:1rem;">
+      <strong>合规报告</strong>：DTM 为采样到的 MEV 事件生成正式分析报告，符合 MiCA / ESMA 监管审计要求。包含策略归因、风险评估、协议脆弱点和合规建议。
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem">
+      <h2 style="margin:0;border:none;font-size:1.3rem">📊 MEV 合规披露报告</h2>
+      <button class="btn btn-primary" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem" onclick="alert('PDF 已导出')">📥 导出 PDF</button>
+    </div>
+
+    <!-- Report Charts Row -->
+    <div class="grid-3" style="margin-bottom:1rem">
+      <div class="panel">
+        <div class="panel-header"><div class="dot" style="background:var(--coral)"></div>策略类型归因</div>
+        <div class="panel-body">
+          <div class="chart-container">
+            <canvas id="reportPieCanvas" height="200"></canvas>
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--coral)"></div>三明治 42%</div>
+            <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--amber)"></div>套利 28%</div>
+            <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--purple)"></div>JIT 18%</div>
+            <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--blue)"></div>清算 12%</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="dot" style="background:var(--cyan)"></div>风险评估雷达</div>
+        <div class="panel-body">
+          <div class="radar-container">
+            <canvas id="reportRadarCanvas" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="dot" style="background:var(--amber)"></div>利润瀑布图</div>
+        <div class="panel-body">
+          <div class="waterfall-container">
+            <canvas id="reportWaterfallCanvas" height="180"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="report-section"><h4>报告概览</h4>
+          <div class="report-metric"><span class="label">报告编号</span><span class="value">DTM-RPT-20260624-001</span></div>
+          <div class="report-metric"><span class="label">生成时间</span><span class="value">2026-06-24 10:15 UTC</span></div>
+          <div class="report-metric"><span class="label">分析区块</span><span class="value">#22180542</span></div>
+          <div class="report-metric"><span class="label">检测模式</span><span class="value" style="color:var(--cyan)">Live 实时 → Fork 仿真</span></div>
+          <div class="report-metric"><span class="label">MEV 类型</span><span class="value" style="color:var(--coral)">三明治策略</span></div>
+        </div>
+        <div class="report-section"><h4>策略方归因</h4>
+          <div class="report-metric"><span class="label">策略方地址</span><span class="value">0x7a25...9f3e</span></div>
+          <div class="report-metric"><span class="label">策略利润 (attackerProfit)</span><span class="value" style="color:var(--amber)" id="rptAttackerProfit">$1,240.50</span></div>
+          <div class="report-metric"><span class="label">交易发起方损失 (victimLoss)</span><span class="value" style="color:var(--coral)" id="rptVictimLoss">$456.20 (1.9%)</span></div>
+          <div class="report-metric"><span class="label">LP 手续费 (lpFee)</span><span class="value" id="rptLpFee">$89.00</span></div>
+          <div class="report-metric"><span class="label">Validator 小费 (validatorTip)</span><span class="value" id="rptValidatorTip">$45.00</span></div>
+          <div class="report-metric"><span class="label">协议费 (protocolFee)</span><span class="value" id="rptProtocolFee">$12.00</span></div>
+        </div>
+        <div class="report-section"><h4>EVM 执行轨迹</h4>
+          <div class="trace-panel">
+            <div class="trace-line"><span class="trace-pc">000</span><span class="trace-op">PUSH1</span><span class="trace-val">0x60</span><span class="trace-comment">; 初始化</span></div>
+            <div style="color:var(--coral);padding:0.2rem 0;font-size:0.68rem">--- 前跑交易 ---</div>
+            <div class="trace-line"><span class="trace-pc">615</span><span class="trace-op">SLOAD</span><span class="trace-val">slot 0x00</span><span class="trace-comment">; 读 reserve0</span></div>
+            <div class="trace-line"><span class="trace-pc">621</span><span class="trace-op">MUL</span><span class="trace-val"></span><span class="trace-comment">; x*y=k</span></div>
+            <div class="trace-line"><span class="trace-pc">625</span><span class="trace-op">SSTORE</span><span class="trace-val">slot 0x00</span><span class="trace-comment" style="color:var(--coral)">; 📍 更新储备</span></div>
+            <div style="color:var(--cyan);padding:0.2rem 0;font-size:0.68rem">--- 交易发起方交易 ---</div>
+            <div class="trace-line"><span class="trace-pc">890</span><span class="trace-op">SLOAD</span><span class="trace-val">slot 0x00</span><span class="trace-comment">; 读被操纵后的储备</span></div>
+            <div class="trace-line"><span class="trace-pc">897</span><span class="trace-op">REVERT</span><span class="trace-val"></span><span class="trace-comment" style="color:var(--coral)">; ❌ 滑点超限</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="report-section"><h4>风险评估</h4>
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.8rem">
+            <div style="width:70px;height:70px;border-radius:50%;background:conic-gradient(var(--coral) 0% 87%,var(--bg-deep) 87% 100%);display:flex;align-items:center;justify-content:center">
+              <div style="width:50px;height:50px;border-radius:50%;background:var(--bg-surface);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--coral)">87</div>
+            </div>
+            <div><div style="font-size:1rem;font-weight:700;color:var(--coral)">极高风险</div><div style="font-size:0.78rem;color:var(--muted)">极大概率遭受三明治策略</div></div>
+          </div>
+          <div class="report-metric"><span class="label">历史策略频率</span><span class="value">过去 30 天 23 次</span></div>
+          <div class="report-metric"><span class="label">池子流动性</span><span class="value">中等 (TVL $4.2M)</span></div>
+          <div class="report-metric"><span class="label">Mempool 竞争度</span><span class="value" style="color:var(--coral)">高 (142 笔待处理)</span></div>
+        </div>
+        <div class="report-section"><h4>协议脆弱点</h4>
+          <div class="report-metric"><span class="label">滑点容忍度</span><span class="value" style="color:var(--coral)">0.5% — 过于宽松</span></div>
+          <div class="report-metric"><span class="label">交易金额/池子深度</span><span class="value" style="color:var(--coral)">0.24% — 易被检测</span></div>
+          <div class="report-metric"><span class="label">私有通道使用</span><span class="value" style="color:var(--coral)">否 — 完全暴露</span></div>
+        </div>
+        <div class="report-section"><h4>合规建议 (MiCA/ESMA)</h4>
+          <div style="font-size:0.82rem;color:var(--sub);line-height:1.8">
+            <p>1. <strong style="color:var(--cyan)">MiCA 透明度：</strong>DEX 应向用户披露 MEV 风险，建议集成 Pre-Trade Risk Score。</p>
+            <p>2. <strong style="color:var(--cyan)">投资者保护：</strong>为零售用户默认启用 MEV 保护（Flashbots Protect）。</p>
+            <p>3. <strong style="color:var(--cyan)">审计日志：</strong>所有 MEV 事件记录不可篡改日志，保留 ≥ 2 年。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DATA MODELS & API CLIENT (Aligned with Detailed Design Doc)
+// ============================================================
+
+/**
+ * @typedef {Object} Transaction
+ * @property {string} hash - 0x...
+ * @property {string} from - 发送方地址
+ * @property {string} to - 目标合约地址
+ * @property {bigint} value - ETH 转账金额
+ * @property {bigint} gasPrice
+ * @property {bigint} gasLimit
+ * @property {string} input - 调用数据 (0x + functionSelector + params)
+ * @property {number} nonce
+ * @property {number} [blockNumber] - 确认后填充
+ * @property {'normal'|'sandwich'|'arbitrage'|'jit'|'liquidation'} type
+ * @property {bigint} [mevProfit] - 策略方利润 (wei)
+ * @property {bigint} [victimLoss] - 交易发起方损失 (wei)
+ * @property {number} timestamp - 到达时间戳
+ */
+
+/**
+ * @typedef {Object} LendingPosition
+ * @property {string} user - 用户地址
+ * @property {'AaveV3'|'Compound'|'MakerDAO'} protocol
+ * @property {string} collateralToken
+ * @property {bigint} collateralAmount
+ * @property {string} debtToken
+ * @property {bigint} debtAmount
+ * @property {number} collateralFactor - e.g., 0.8
+ * @property {number} liquidationThreshold - e.g., 0.825
+ * @property {number} healthFactor
+ * @property {number} liquidationPrice - 触发清算的价格
+ * @property {'safe'|'warning'|'danger'|'liquidated'} status
+ */
+
+/**
+ * @typedef {Object} LPPosition
+ * @property {string} user
+ * @property {string} pool - 池子地址
+ * @property {string} token0
+ * @property {string} token1
+ * @property {bigint} amount0
+ * @property {bigint} amount1
+ * @property {number} [tickLower] - V3 only
+ * @property {number} [tickUpper] - V3 only
+ * @property {number} feeTier - e.g., 0.003 (0.3%)
+ * @property {number} impermanentLoss
+ * @property {bigint} feeIncome
+ * @property {bigint} netPnl
+ */
+
+/**
+ * @typedef {Object} ExperimentSection
+ * @property {string} id - UUID
+ * @property {number} blockNumber - fork 的区块高度
+ * @property {string} forkUrl - Anvil RPC 端点
+ * @property {number} anvilPid - Anvil 进程 ID
+ * @property {number} createdAt
+ * @property {Transaction[]} events - 捕获的事件列表
+ * @property {Record<string, number>} parameters - 用户调节的参数
+ * @property {AttributionResult} results
+ * @property {string} [cid] - IPFS 指纹
+ * @property {'creating'|'frozen'|'analyzing'|'archived'} state - 实验切片状态
+ */
+
+/**
+ * @typedef {Object} AttributionResult
+ * @property {bigint} attackerProfit
+ * @property {bigint} victimLoss
+ * @property {bigint} lpFee
+ * @property {bigint} validatorTip
+ * @property {bigint} [protocolFee]
+ * @property {bigint} [badDebtAvoided]
+ */
+
+// -------------------- Mock API Client --------------------
+const apiClient = {
+  baseUrl: '/api/v1',
+
+  /** POST /fork/create */
+  async createSection(blockNumber, rpcUrl) {
+    const id = 'sec-' + Math.random().toString(36).slice(2, 10);
+    return { id, rpcEndpoint: 'http://127.0.0.1:8545/' + id, status: 'creating' };
+  },
+
+  /** POST /fork/execute */
+  async executeTx(sectionId, from, to, data, value) {
+    return { txHash: '0x' + Math.random().toString(16).slice(2, 66), gasUsed: 124500, logs: [] };
+  },
+
+  /** POST /fork/revert */
+  async revertSection(sectionId, snapshotId) {
+    return { success: true };
+  },
+
+  /** POST /fork/snapshot */
+  async snapshotSection(sectionId) {
+    return { snapshotId: 'snap-' + Math.random().toString(36).slice(2, 8) };
+  },
+
+  /** GET /attribution/mev */
+  async getMevAttribution(txHash) {
+    return { profit: 1240500000000000000n, loss: 456200000000000000n, fee: 18540000000000000n, breakdown: {} };
+  },
+
+  /** GET /attribution/il */
+  async getILAttribution(pool, user, blockStart, blockEnd) {
+    return { il: -0.0234, feeIncome: 890000000000000000n, netPnl: -145000000000000000n };
+  },
+
+  /** GET /position/health */
+  async getHealthFactor(address, protocol) {
+    return { hf: 1.42, collateral: 32500000000000000000n, debt: 15000000000n, liquidationPrice: 1800 };
+  },
+
+  /** POST /report/generate */
+  async generateReport(sectionId, format) {
+    return { reportUrl: '#', cid: 'Qm' + Math.random().toString(36).slice(2, 46) };
+  }
+};
+
+// -------------------- Mock WS Client --------------------
+const wsClient = {
+  _listeners: {},
+  connect() { console.log('[WS] Connected to /ws/v1/stream'); },
+  on(event, cb) { (this._listeners[event] = this._listeners[event] || []).push(cb); },
+  _emit(event, data) { (this._listeners[event] || []).forEach(cb => cb(data)); },
+  simulateMempoolTx(tx) { this._emit('mempool_tx', tx); },
+  simulateBlockConfirm(block) { this._emit('block_confirm', block); },
+  simulateLiquidationEvent(evt) { this._emit('liquidation_event', evt); },
+  simulatePriceUpdate(pu) { this._emit('price_update', pu); },
+  simulateAmmSync(sync) { this._emit('amm_sync', sync); }
+};
+
+// -------------------- Anvil RPC Client --------------------
+const anvilClient = {
+  rpcUrl: 'http://127.0.0.1:8545',
+  async impersonate(address) { return true; },
+  async setStorageAt(contract, slot, value) { return true; },
+  async setBalance(address, balance) { return true; },
+  async mine() { return true; },
+  async revert(snapshotId) { return true; },
+  async snapshot() { return '0x' + Math.random().toString(16).slice(2, 10); },
+  async sendTransaction(tx) { return '0x' + Math.random().toString(16).slice(2, 66); },
+  async call(tx) { return '0x'; },
+  async traceTransaction(txHash) { return { gas: 124500, structLogs: [] }; }
+};
+
+// -------------------- Section State Manager --------------------
+const sectionStore = {
+  sections: /** @type {ExperimentSection[]} */ ([]),
+  currentSectionId: null,
+
+  create(blockNumber, rpcUrl) {
+    const id = 'sec-' + Math.random().toString(36).slice(2, 10);
+    const sec = {
+      id, blockNumber, forkUrl: rpcUrl || 'http://127.0.0.1:8545',
+      anvilPid: Math.floor(Math.random() * 90000) + 10000,
+      createdAt: Date.now(), events: [], parameters: {}, results: {}, state: 'creating'
+    };
+    this.sections.push(sec);
+    this.currentSectionId = id;
+    setTimeout(() => { sec.state = 'frozen'; }, 2000);
+    return sec;
+  },
+
+  getCurrent() { return this.sections.find(s => s.id === this.currentSectionId); },
+
+  updateParams(params) {
+    const s = this.getCurrent();
+    if (s) { s.parameters = { ...s.parameters, ...params }; s.state = 'analyzing'; }
+  },
+
+  archive() {
+    const s = this.getCurrent();
+    if (s) s.state = 'archived';
+  },
+
+  addEvent(/** @type {Transaction} */ tx) {
+    const s = this.getCurrent();
+    if (s) s.events.push(tx);
+  }
+};
+
+// -------------------- Helper: generate compliant tx --------------------
+function makeTransaction(type) {
+  const types = ['normal', 'sandwich', 'arbitrage', 'jit', 'liquidation'];
+  const t = type || types[Math.floor(Math.random() * types.length)];
+  const hash = '0x' + Array.from({length:64},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  const from = '0x' + Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  const to = '0xE592427A0AEce92De3Edee1F18E0157C05861564'; // Uniswap V3 Router
+  return {
+    hash, from, to, value: 0n, gasPrice: 25000000000n, gasLimit: 150000n,
+    input: '0x' + Array.from({length:128},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join(''),
+    nonce: Math.floor(Math.random() * 500), blockNumber: undefined, type: t,
+    mevProfit: t === 'normal' ? 0n : BigInt(Math.floor(Math.random() * 2e18)),
+    victimLoss: t === 'normal' ? 0n : BigInt(Math.floor(Math.random() * 5e17)),
+    timestamp: Date.now()
+  };
+}
+
+// -------------------- Helper: generate compliant lending position --------------------
+function makeLendingPosition(protocol) {
+  const protos = ['AaveV3', 'Compound', 'MakerDAO'];
+  const p = protocol || protos[Math.floor(Math.random() * protos.length)];
+  const colAmt = BigInt(Math.floor(1 + Math.random() * 500) * 1e18);
+  const colPrice = 2000 + Math.random() * 800;
+  const debt = BigInt(Math.floor(Math.random() * (Number(colAmt) / 1e18 * colPrice * 0.75)));
+  const ltv = p === 'AaveV3' ? 0.8 : p === 'Compound' ? 0.75 : 0.66;
+  const liqTh = ltv * 1.03;
+  const hf = (Number(colAmt) / 1e18 * colPrice * liqTh) / (Number(debt) || 1);
+  const liqPrice = hf > 0 ? Number(debt) / (Number(colAmt) / 1e18 * liqTh) : 0;
+  return {
+    user: '0x' + Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join(''),
+    protocol: p, collateralToken: 'WETH', collateralAmount: colAmt,
+    debtToken: 'USDC', debtAmount: debt,
+    collateralFactor: ltv, liquidationThreshold: liqTh,
+    healthFactor: hf, liquidationPrice: liqPrice,
+    status: hf > 1.5 ? 'safe' : hf > 1.05 ? 'warning' : hf > 1 ? 'danger' : 'liquidated'
+  };
+}
+
+// -------------------- Helper: format bigint to readable --------------------
+function fmtEth(wei) { return (Number(wei) / 1e18).toFixed(4) + ' ETH'; }
+function fmtUsdc(amt) { return '$' + (Number(amt) / 1e6).toLocaleString(); }
+function fmtWei(wei) { return '$' + Math.round(Number(wei) / 1e18 * 2450).toLocaleString(); }
+
+// -------------------- Global Attribution State (aligned with doc) --------------------
+let currentAttribution = /** @type {AttributionResult} */ ({
+  attackerProfit: 1240500000000000000n,
+  victimLoss: 456200000000000000n,
+  lpFee: 89000000000000000n,
+  validatorTip: 45000000000000000n,
+  protocolFee: 12000000000000000n,
+  badDebtAvoided: 0n
+});
+
+function updateAttributionFromFork() {
+  const profit = parseInt(document.getElementById('forkAttackerProfit').textContent.replace(/[$,]/g, '')) || 1240;
+  const loss = parseInt(document.getElementById('forkUserLoss').textContent.replace(/[$,]/g, '')) || 456;
+  currentAttribution.attackerProfit = BigInt(Math.round(profit * 1e18 / 2450));
+  currentAttribution.victimLoss = BigInt(Math.round(loss * 1e18 / 2450));
+}
+
+// ==================== LOADING SCREEN ====================
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hidden');
+    setTimeout(() => {
+      startMempoolSimulation();
+      initLiveAmm();
+      initPnlCanvas();
+    }, 500);
+  }, 2500);
+});
+
+// ==================== PARTICLE BACKGROUND ====================
+const pCanvas = document.getElementById('particleCanvas');
+const pCtx = pCanvas.getContext('2d');
+let particles = [];
+let pW, pH;
+
+function resizeParticles() {
+  pW = pCanvas.width = window.innerWidth;
+  pH = pCanvas.height = window.innerHeight;
+}
+resizeParticles();
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * pW;
+    this.y = Math.random() * pH;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.size = Math.random() * 1.5 + 0.5;
+    this.alpha = Math.random() * 0.4 + 0.1;
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.pulse += 0.02;
+    if (this.x < 0 || this.x > pW || this.y < 0 || this.y > pH) this.reset();
+  }
+  draw() {
+    const a = this.alpha * (0.7 + 0.3 * Math.sin(this.pulse));
+    pCtx.beginPath();
+    pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    pCtx.fillStyle = `rgba(0, 229, 255, ${a})`;
+    pCtx.fill();
+  }
+}
+
+for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+function drawParticles() {
+  pCtx.clearRect(0, 0, pW, pH);
+  particles.forEach(p => { p.update(); p.draw(); });
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        pCtx.beginPath();
+        pCtx.moveTo(particles[i].x, particles[i].y);
+        pCtx.lineTo(particles[j].x, particles[j].y);
+        pCtx.strokeStyle = `rgba(0, 229, 255, ${0.04 * (1 - dist / 120)})`;
+        pCtx.lineWidth = 0.5;
+        pCtx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+window.addEventListener('resize', resizeParticles);
+
+// ==================== EXPLOSION EFFECT ====================
+const expCanvas = document.getElementById('explosionCanvas');
+const expCtx = expCanvas.getContext('2d');
+let explosions = [];
+
+function resizeExplosionCanvas() {
+  const container = document.getElementById('mempoolContainer');
+  if (container) {
+    const rect = container.getBoundingClientRect();
+    expCanvas.width = rect.width;
+    expCanvas.height = rect.height;
+    expCanvas.style.left = rect.left + 'px';
+    expCanvas.style.top = rect.top + 'px';
+  }
+}
+
+class Explosion {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.particles = [];
+    for (let i = 0; i < 12; i++) {
+      this.particles.push({
+        x: x, y: y,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+        size: Math.random() * 3 + 1,
+        alpha: 1,
+        decay: Math.random() * 0.03 + 0.02
+      });
+    }
+  }
+  update() {
+    this.particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.alpha -= p.decay;
+      p.size *= 0.98;
+    });
+    this.particles = this.particles.filter(p => p.alpha > 0);
+  }
+  draw() {
+    this.particles.forEach(p => {
+      expCtx.beginPath();
+      expCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      expCtx.fillStyle = this.color + Math.floor(p.alpha * 255).toString(16).padStart(2, '0');
+      expCtx.fill();
+    });
+  }
+}
+
+function drawExplosions() {
+  expCtx.clearRect(0, 0, expCanvas.width, expCanvas.height);
+  explosions.forEach(e => { e.update(); e.draw(); });
+  explosions = explosions.filter(e => e.particles.length > 0);
+  requestAnimationFrame(drawExplosions);
+}
+drawExplosions();
+
+function triggerExplosion(element, color) {
+  const rect = element.getBoundingClientRect();
+  const containerRect = document.getElementById('mempoolContainer').getBoundingClientRect();
+  const x = rect.left - containerRect.left + rect.width / 2;
+  const y = rect.top - containerRect.top + rect.height / 2;
+  explosions.push(new Explosion(x, y, color));
+}
+
+// ==================== MOBILE PANEL COLLAPSE ====================
+function togglePanel(header) {
+  if (window.innerWidth > 768) return;
+  const panel = header.closest('.panel');
+  panel.classList.toggle('collapsed');
+}
+
+// ==================== STATE ====================
+let currentMode = 'live';
+let isSimulating = false;
+let mempoolInterval = null;
+let demoRunning = false;
+let demoTimer = null;
+
+// ==================== PAGE / MODE SWITCH ====================
+function switchPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelector('[data-page="' + id + '"]').classList.add('active');
+
+  if (id === 'live') { startMempoolSimulation(); initLiveAmm(); initPnlCanvas(); }
+  if (id === 'fork') { setTimeout(() => { initForkAmm(); initForkSankey(); updateForkViz(); }, 100); }
+  if (id === 'liquidation') { setTimeout(() => { if (liqState.liqMode === 'panorama') initLiqPanorama(); else updateLiq(); }, 100); }
+  if (id === 'lpil') { setTimeout(() => { updateLP(); }, 100); }
+  if (id === 'edu') { setTimeout(() => { initEduCanvas(); updateEdu(); }, 100); }
+  if (id === 'report') { setTimeout(() => { initReportCharts(); updateReportAttribution(); }, 100); }
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  if (mode === 'live') switchPage('live');
+  else switchPage('fork');
+}
+
+// ==================== ONE-CLICK DEMO ====================
+const demoSteps = [
+  { t: 0, text: '步骤 1/5: 进入 Live 实时采样模式...', action: () => { switchMode('live'); } },
+  { t: 2000, text: '步骤 2/5: Mempool 实时流动中，等待 MEV 事件...', action: () => {
+    const container = document.getElementById('mempoolContainer');
+    const tx = makeTransaction('sandwich');
+    const meta = txTypeMeta.sandwich;
+    const div = document.createElement('div');
+    div.className = 'mempool-lane ' + meta.class;
+    div.style.animation = 'none';
+    div.innerHTML = `<span class="tx-hash">${tx.hash.slice(0,14)}...${tx.hash.slice(-6)}</span><span class="tx-type ${meta.txClass}">${meta.label}</span><span class="tx-desc">${meta.desc}</span><span class="tx-gas">${meta.gas}</span><span class="tx-time">${new Date().toLocaleTimeString('zh-CN',{hour12:false})}</span><button class="microscope-btn" onclick="enterMicroscope()">🔬 放入显微镜</button>`;
+    container.insertBefore(div, container.firstChild);
+    while (container.children.length > 20) container.removeChild(container.lastChild);
+    wsClient.simulateMempoolTx(tx);
+    sectionStore.addEvent(tx);
+  }},
+  { t: 4000, text: '步骤 3/5: 🚨 采样到三明治策略！交易发起方多付 ~0.8%', action: () => { showFlashAlert('sandwich'); } },
+  { t: 6000, text: '步骤 4/5: 点击"放入显微镜"，进入 Fork 实验切片...', action: () => { enterMicroscope(); } },
+  { t: 11000, text: '步骤 5/5: 在 Fork 模式中调整池子深度，观察 MEV 利润变化...', action: () => {
+    const slider = document.getElementById('forkDepth');
+    let v = 1000;
+    const target = 5000;
+    const anim = setInterval(() => {
+      v += 80;
+      if (v >= target) { v = target; clearInterval(anim); }
+      slider.value = v;
+      updateForkViz();
+    }, 50);
+  }},
+  { t: 16000, text: '实验完成！深池子天然抗 MEV ✨', action: () => {
+    setTimeout(() => { stopDemo(); }, 2000);
+  }}
+];
+
+function startDemo() {
+  if (demoRunning) return;
+  demoRunning = true;
+  const btn = document.getElementById('demoBtn');
+  btn.classList.add('playing');
+  btn.innerHTML = '<span>⏸</span> 实验中...';
+  document.getElementById('demoOverlay').classList.add('active');
+
+  const totalTime = 18000;
+  const startTime = Date.now();
+
+  const progressInterval = setInterval(() => {
+    if (!demoRunning) { clearInterval(progressInterval); return; }
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min(100, (elapsed / totalTime) * 100);
+    document.getElementById('demoProgressBar').style.width = pct + '%';
+  }, 100);
+
+  demoSteps.forEach(step => {
+    demoTimer = setTimeout(() => {
+      if (!demoRunning) return;
+      document.getElementById('demoText').textContent = step.text;
+      step.action();
+    }, step.t);
+  });
+}
+
+function stopDemo() {
+  demoRunning = false;
+  clearTimeout(demoTimer);
+  const btn = document.getElementById('demoBtn');
+  btn.classList.remove('playing');
+  btn.innerHTML = '<span>▶</span> 一键实验';
+  document.getElementById('demoOverlay').classList.remove('active');
+  document.getElementById('demoProgressBar').style.width = '0%';
+  dismissAlert();
+}
+
+// ==================== MEMPOOL SIMULATION ====================
+const txTypeMeta = {
+  sandwich:   { label: '三明治', class: 'sandwich', txClass: 'tx-type-sandwich', desc: 'Front-run → Swap → Back-run', gas: '98.2 gwei', icon: '🥪', color: '#ff5e5e' },
+  arbitrage:  { label: '套利', class: 'arbitrage', txClass: 'tx-type-arb', desc: 'CEX-DEX 价差套利', gas: '87.5 gwei', icon: '⚡', color: '#ffab40' },
+  jit:        { label: 'JIT', class: 'jit', txClass: 'tx-type-jit', desc: '瞬间注入流动性赚取手续费', gas: '125.3 gwei', icon: '🎯', color: '#b388ff' },
+  liquidation:{ label: '清算', class: 'liquidation', txClass: 'tx-type-liquidation', desc: 'AAVE 健康因子 < 1.0 清算', gas: '156.8 gwei', icon: '💥', color: '#448aff' },
+  normal:     { label: '正常', class: 'normal', txClass: 'tx-type-normal', desc: '普通转账', gas: '12.4 gwei', icon: '✅', color: '#69f0ae' },
+};
+
+let txCounter = 0;
+
+/** Generate a Transaction compliant with the design doc */
+function generateTx() {
+  const types = Object.keys(txTypeMeta);
+  const typeKey = types[Math.floor(Math.random() * types.length)];
+  const meta = txTypeMeta[typeKey];
+  txCounter++;
+  const tx = makeTransaction(typeKey);
+  return { ...tx, ...meta, displayHash: tx.hash.slice(0, 14) + '...' + tx.hash.slice(-6), time: new Date().toLocaleTimeString('zh-CN', { hour12: false }), id: txCounter };
+}
+
+function renderMempool() {
+  const container = document.getElementById('mempoolContainer');
+  if (!container) return;
+  const tx = generateTx();
+  const div = document.createElement('div');
+  div.className = 'mempool-lane ' + tx.class;
+  div.innerHTML = `
+    <span class="tx-hash">${tx.displayHash}</span>
+    <span class="tx-type ${tx.txClass}">${tx.label}</span>
+    <span class="tx-desc">${tx.desc}</span>
+    <span class="tx-gas">${tx.gas}</span>
+    <span class="tx-time">${tx.time}</span>
+    ${tx.class === 'sandwich' || tx.class === 'jit' || tx.class === 'liquidation' ? '<button class="microscope-btn" onclick="enterMicroscope()">🔬 放入显微镜</button>' : ''}
+  `;
+  container.insertBefore(div, container.firstChild);
+  while (container.children.length > 20) container.removeChild(container.lastChild);
+
+  // Emit WS event & add to current section
+  wsClient.simulateMempoolTx(tx);
+  sectionStore.addEvent(tx);
+
+  // Trigger explosion for attack types
+  if (tx.type !== 'normal') {
+    setTimeout(() => triggerExplosion(div, tx.color), 100);
+  }
+
+  if ((tx.type === 'sandwich' || tx.type === 'jit') && Math.random() > 0.7 && !demoRunning) showFlashAlert(tx.type);
+}
+
+function startMempoolSimulation() {
+  if (mempoolInterval) clearInterval(mempoolInterval);
+  const container = document.getElementById('mempoolContainer');
+  container.innerHTML = '';
+  for (let i = 0; i < 8; i++) renderMempool();
+  mempoolInterval = setInterval(renderMempool, 2500);
+  resizeExplosionCanvas();
+}
+
+function showFlashAlert(type) {
+  const alert = document.getElementById('flashAlert');
+  const title = document.getElementById('flashTitle');
+  const body = document.getElementById('flashBody');
+
+  const alerts = {
+    sandwich: { t: '🚨 采样到三明治策略！', b: 'Mempool 中 WETH/USDC 出现疑似三明治：前跑买入 → 大额 Swap → 后跑卖出。交易发起方多付 ~0.8% 滑点。' },
+    jit: { t: '🎯 采样到 JIT 流动性狙击！', b: '策略方在你的交易前瞬间注入大量流动性，赚取手续费后立即撤出。这是一种高级 MEV 策略。' },
+    liquidation: { t: '💥 采样到清算归因！', b: 'AAVE 上某头寸健康因子跌破 1.0，清算机器人正在竞争运行清算归因，赚取清算奖励。' },
+  };
+
+  const a = alerts[type] || alerts.sandwich;
+  title.textContent = a.t;
+  body.textContent = a.b;
+  alert.classList.add('active');
+  setTimeout(() => { if (!alert.matches(':hover')) alert.classList.remove('active'); }, 8000);
+}
+
+function dismissAlert() {
+  document.getElementById('flashAlert').classList.remove('active');
+}
+
+// ==================== ENTER MICROSCOPE ====================
+async function enterMicroscope() {
+  dismissAlert();
+  const transition = document.getElementById('lensTransition');
+  transition.classList.add('active');
+
+  // Step 1: Create experiment section via API
+  const blockNum = rtcBlockNum;
+  const sec = sectionStore.create(blockNum, 'https://eth-mainnet.g.alchemy.com/v2/demo');
+
+  // Step 2: Call mock API (async simulation)
+  const apiRes = await apiClient.createSection(blockNum);
+
+  const steps = ['ls1', 'ls2', 'ls3', 'ls4'];
+  const statuses = [
+    `正在捕获实时 MEV 事件... (区块 #${blockNum})`,
+    `anvil --fork-url mainnet --fork-block-number ${blockNum}  [PID:${sec.anvilPid}]`,
+    '解析 EVM trace: 前跑 → 交易发起方 → 后跑',
+    `实验切片 ${sec.id} 就绪！状态: ${sec.state}`
+  ];
+
+  steps.forEach((step, i) => {
+    setTimeout(() => {
+      document.querySelectorAll('.lens-step').forEach(s => s.classList.remove('active'));
+      document.getElementById(step).classList.add('active');
+      document.getElementById('lensStatus').textContent = statuses[i];
+    }, i * 700);
+  });
+
+  setTimeout(() => { transition.classList.add('zooming'); }, 1400);
+  setTimeout(() => {
+    transition.classList.remove('active', 'zooming');
+    switchMode('fork');
+    // Populate fork page with section data
+    document.getElementById('forkBlockNumber').textContent = '#' + sec.blockNumber;
+    document.getElementById('forkSectionId').textContent = sec.id;
+  }, 3200);
+}
+
+// ==================== LIVE AMM CANVAS ====================
+let liveAmmC, liveAmmX;
+let livePrice = 2456.32;
+let priceHistory = [];
+
+function initLiveAmm() {
+  liveAmmC = document.getElementById('liveAmmCanvas');
+  if (!liveAmmC) return;
+  liveAmmX = liveAmmC.getContext('2d');
+  const r = liveAmmC.parentElement.getBoundingClientRect();
+  liveAmmC.width = r.width - 32;
+  priceHistory = Array(50).fill(livePrice);
+  drawLiveAmm();
+}
+
+function drawLiveAmm() {
+  if (!liveAmmC) return;
+  const w = liveAmmC.width, h = liveAmmC.height, ctx = liveAmmX;
+  ctx.clearRect(0, 0, w, h);
+
+  livePrice += (Math.random() - 0.5) * 4;
+  priceHistory.push(livePrice);
+  priceHistory.shift();
+
+  document.getElementById('livePrice').textContent = livePrice.toFixed(2);
+  const change = ((livePrice - 2456.32) / 2456.32 * 100).toFixed(2);
+  const changeEl = document.getElementById('liveChange');
+  changeEl.textContent = (change >= 0 ? '+' : '') + change + '% ' + (change >= 0 ? '▲' : '▼');
+  changeEl.style.color = change >= 0 ? 'var(--lime)' : 'var(--coral)';
+
+  ctx.strokeStyle = 'rgba(139,155,180,0.04)';
+  for (let i = 0; i <= 5; i++) {
+    const y = (h / 5) * i;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  const min = Math.min(...priceHistory) - 2;
+  const max = Math.max(...priceHistory) + 2;
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(0,229,255,0.3)';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  priceHistory.forEach((p, i) => {
+    const x = (i / (priceHistory.length - 1)) * w;
+    const y = h - 20 - ((p - min) / (max - min)) * (h - 40);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  priceHistory.forEach((p, i) => {
+    const x = (i / (priceHistory.length - 1)) * w;
+    const y = h - 20 - ((p - min) / (max - min)) * (h - 40);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+  ctx.fillStyle = 'rgba(0,229,255,0.06)'; ctx.fill();
+
+  const cx = w - 5;
+  const cy = h - 20 - ((priceHistory[priceHistory.length - 1] - min) / (max - min)) * (h - 40);
+  ctx.fillStyle = '#00e5ff';
+  ctx.shadowColor = 'rgba(0,229,255,0.5)';
+  ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  requestAnimationFrame(drawLiveAmm);
+}
+
+// ==================== PNL CANVAS ====================
+let pnlC, pnlX;
+function initPnlCanvas() {
+  pnlC = document.getElementById('pnlCanvas');
+  if (!pnlC) return;
+  pnlX = pnlC.getContext('2d');
+  const r = pnlC.parentElement.getBoundingClientRect();
+  pnlC.width = r.width - 32;
+  drawPnl();
+}
+
+function drawPnl() {
+  if (!pnlC) return;
+  const w = pnlC.width, h = pnlC.height, ctx = pnlX;
+  ctx.clearRect(0, 0, w, h);
+
+  // Compute percentages from currentAttribution (aligned with AttributionResult)
+  const total = Number(currentAttribution.attackerProfit) + Number(currentAttribution.victimLoss) + Number(currentAttribution.lpFee) + Number(currentAttribution.validatorTip);
+  const data = [
+    { label: 'Searcher 利润', value: total ? Math.round(Number(currentAttribution.attackerProfit) * 100 / total) : 62, color: '#ffab40' },
+    { label: '交易发起方滑点', value: total ? Math.round(Number(currentAttribution.victimLoss) * 100 / total) : 23, color: '#ff5e5e' },
+    { label: 'LP 手续费', value: total ? Math.round(Number(currentAttribution.lpFee) * 100 / total) : 10, color: '#69f0ae' },
+    { label: 'Validator', value: total ? Math.round(Number(currentAttribution.validatorTip) * 100 / total) : 5, color: '#b388ff' },
+  ];
+
+  let x = 20;
+  data.forEach(d => {
+    const bw = (w - 40) / data.length - 10;
+    const bh = (d.value / 100) * (h - 40);
+    ctx.fillStyle = d.color + '25';
+    ctx.fillRect(x, h - 20 - bh, bw, bh);
+    ctx.strokeStyle = d.color;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, h - 20 - bh, bw, bh);
+    ctx.fillStyle = d.color;
+    ctx.font = 'bold 11px Noto Sans SC';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.value + '%', x + bw / 2, h - 25 - bh);
+    ctx.fillStyle = '#8b9bb4';
+    ctx.font = '9px Noto Sans SC';
+    ctx.fillText(d.label, x + bw / 2, h - 5);
+    x += bw + 10;
+  });
+}
+
+// ==================== FORK AMM ====================
+let forkAmmC, forkAmmX;
+function initForkAmm() {
+  forkAmmC = document.getElementById('forkAmmCanvas');
+  if (!forkAmmC) return;
+  forkAmmX = forkAmmC.getContext('2d');
+  const r = forkAmmC.parentElement.getBoundingClientRect();
+  forkAmmC.width = r.width - 32;
+  drawForkAmm();
+}
+
+function drawForkAmm() {
+  if (!forkAmmC) return;
+  const w = forkAmmC.width, h = forkAmmC.height, ctx = forkAmmX;
+  ctx.clearRect(0, 0, w, h);
+
+  const depth = parseInt(document.getElementById('forkDepth').value) || 1000;
+  const k = depth * depth;
+
+  ctx.strokeStyle = 'rgba(139,155,180,0.04)';
+  for (let i = 0; i <= 10; i++) {
+    const x = (w / 10) * i, y = (h / 10) * i;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(0,229,255,0.2)';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  for (let px = 35; px < w - 15; px += 2) {
+    const xV = (px - 35) / (w - 50) * depth * 2;
+    const yV = k / Math.max(xV, 1);
+    const py = h - 20 - (yV / (depth * 4)) * (h - 35);
+    if (py > 15 && py < h - 20) { if (px === 35) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = 'rgba(255,94,94,0.4)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  for (let px = 35; px < w - 15; px += 2) {
+    const xV = (px - 35) / (w - 50) * depth * 2;
+    const yV = (k * 1.015) / Math.max(xV, 1);
+    const py = h - 20 - (yV / (depth * 4)) * (h - 35);
+    if (py > 15 && py < h - 20) { if (px === 35) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const ux = 35 + (depth / (depth * 2)) * (w - 50);
+  const uy = h - 20 - ((k / depth) / (depth * 4)) * (h - 35);
+  ctx.fillStyle = '#69f0ae';
+  ctx.beginPath(); ctx.arc(ux, uy, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#69f0ae'; ctx.font = '9px Noto Sans SC'; ctx.fillText('交易前', ux - 15, uy - 10);
+
+  const nd = depth - 50;
+  const ax = 35 + (nd / (depth * 2)) * (w - 50);
+  const ay = h - 20 - ((k * 1.015 / nd) / (depth * 4)) * (h - 35);
+  ctx.fillStyle = '#ff5e5e';
+  ctx.beginPath(); ctx.arc(ax, ay, 5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,94,94,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(ux, uy); ctx.lineTo(ax, ay); ctx.stroke();
+
+  const impact = ((50 / depth) * 100 * 1.8).toFixed(1);
+  ctx.fillStyle = '#ff5e5e'; ctx.font = '9px Noto Sans SC'; ctx.fillText('价格冲击 ' + impact + '%', ax - 20, ay - 10);
+}
+
+function updateForkViz() {
+  const depth = document.getElementById('forkDepth').value;
+  document.getElementById('forkDepthVal').textContent = Number(depth).toLocaleString();
+  document.getElementById('forkSlippageVal').textContent = (document.getElementById('forkSlippage').value / 10).toFixed(1) + '%';
+
+  const ratio = 50 / depth;
+  const profit = Math.round(1240 * (1000 / depth));
+  const loss = Math.round(456 * (1000 / depth));
+
+  document.getElementById('forkAttackerProfit').textContent = '$' + profit.toLocaleString();
+  document.getElementById('forkUserLoss').textContent = '$' + loss.toLocaleString();
+
+  const score = Math.max(10, Math.round(87 * (1000 / depth)));
+  const fill = document.getElementById('forkGaugeFill');
+  const val = document.getElementById('forkGaugeValue');
+  fill.style.stroke = score > 60 ? 'var(--coral)' : score > 30 ? 'var(--amber)' : 'var(--lime)';
+  fill.style.strokeDashoffset = 346 - (score / 100) * 346;
+  val.textContent = score;
+  val.style.color = score > 60 ? 'var(--coral)' : score > 30 ? 'var(--amber)' : 'var(--lime)';
+
+  const conclusion = document.getElementById('forkConclusion');
+  if (depth >= 5000) {
+    conclusion.innerHTML = '<p>池子深度 <strong style="color:var(--lime)">' + Number(depth).toLocaleString() + ' WETH</strong>，策略方利润降至 <strong style="color:var(--lime)">$' + profit.toLocaleString() + '</strong>。</p><p>深池子天然抗 MEV：同样的交易金额，对价格冲击更小，策略方可提取的价值大幅减少。</p><p><span style="color:var(--lime)">结论：选择高 TVL 池子是防御 MEV 的最有效手段之一。</span></p>';
+  } else {
+    conclusion.innerHTML = '<p>当前池子深度 <strong style="color:var(--cyan)">' + Number(depth).toLocaleString() + ' WETH</strong>，策略方利润 <strong style="color:var(--coral)">$' + profit.toLocaleString() + '</strong>。</p><p>试试把池子深度拖到 <strong style="color:var(--lime)">5,000 WETH</strong>——策略方利润会骤降至约 <strong style="color:var(--lime)">$' + Math.round(1240 * 0.2).toLocaleString() + '</strong>。</p>';
+  }
+
+  // Update section store parameters (state machine: frozen → analyzing)
+  sectionStore.updateParams({ depth: parseInt(depth), slippage: parseFloat(document.getElementById('forkSlippage').value) / 10 });
+
+  drawForkAmm();
+  drawForkSankey();
+  updateAttributionFromFork();
+}
+
+function updateReportAttribution() {
+  document.getElementById('rptAttackerProfit').textContent = fmtWei(currentAttribution.attackerProfit);
+  document.getElementById('rptVictimLoss').textContent = fmtWei(currentAttribution.victimLoss) + ' (' + (Number(currentAttribution.victimLoss) * 100 / (Number(currentAttribution.attackerProfit) + Number(currentAttribution.victimLoss))).toFixed(1) + '%)';
+  document.getElementById('rptLpFee').textContent = fmtWei(currentAttribution.lpFee);
+  document.getElementById('rptValidatorTip').textContent = fmtWei(currentAttribution.validatorTip);
+  document.getElementById('rptProtocolFee').textContent = fmtWei(currentAttribution.protocolFee);
+}
+
+async function replayFork() {
+  const timeline = document.getElementById('forkTimeline');
+  timeline.innerHTML = '';
+
+  // Create snapshot before replay (aligned with anvil_snapshot design)
+  const snapId = await anvilClient.snapshot();
+  const sec = sectionStore.getCurrent();
+  if (sec) sec.snapshotId = snapId;
+
+  const steps = [
+    { time: '步骤 1', tag: '[前跑]', cls: 'tag-danger', desc: '策略方买入 5 WETH，reserve0 从 ' + document.getElementById('forkDepth').value + ' → ' + (parseInt(document.getElementById('forkDepth').value) - 5) + '，价格被推高' },
+    { time: '步骤 2', tag: '[交易发起方]', cls: 'tag-event', desc: '你以更高价格成交 10 WETH → USDC，实际滑点 ' + document.getElementById('forkSlippageVal').textContent },
+    { time: '步骤 3', tag: '[后跑]', cls: 'tag-success', desc: '策略方卖出获利 $' + document.getElementById('forkAttackerProfit').textContent.replace('$', '').replace(',', '') + '，你多付了 $' + document.getElementById('forkUserLoss').textContent.replace('$', '').replace(',', '') },
+  ];
+
+  steps.forEach((s, i) => {
+    setTimeout(async () => {
+      const d = document.createElement('div');
+      d.className = 'timeline-item ' + (s.cls === 'tag-danger' ? 'danger' : s.cls === 'tag-success' ? 'success' : 'active');
+      d.innerHTML = `<div class="timeline-time">${s.time}</div><div class="timeline-content"><div class="timeline-tag ${s.cls}">${s.tag}</div><div class="timeline-desc">${s.desc}</div></div>`;
+      timeline.appendChild(d);
+      d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      // Simulate anvil_sendTransaction for each step
+      await anvilClient.sendTransaction({ from: '0xAttacker', to: '0xPool', data: '0x', value: 0 });
+    }, i * 600);
+  });
+}
+
+function stepFork(step) {
+  replayFork();
+}
+
+// ==================== FORK SANKEY ====================
+let forkSnkC, forkSnkX;
+function initForkSankey() {
+  forkSnkC = document.getElementById('forkSankeyCanvas');
+  if (!forkSnkC) return;
+  forkSnkX = forkSnkC.getContext('2d');
+  const r = forkSnkC.parentElement.getBoundingClientRect();
+  forkSnkC.width = r.width - 32;
+  drawForkSankey();
+}
+
+function drawForkSankey() {
+  if (!forkSnkC) return;
+  const w = forkSnkC.width, h = forkSnkC.height, ctx = forkSnkX;
+  ctx.clearRect(0, 0, w, h);
+
+  const profit = parseInt(document.getElementById('forkAttackerProfit').textContent.replace(/[$,]/g, '')) || 1240;
+  const loss = parseInt(document.getElementById('forkUserLoss').textContent.replace(/[$,]/g, '')) || 456;
+
+  const ns = [
+    { x: 25, y: 30, w: 65, h: 22, l: '用户', c: '#69f0ae', v: '10 WETH' },
+    { x: 25, y: 70, w: 65, h: 22, l: '策略方', c: '#ff5e5e', v: '5 WETH' },
+    { x: w / 2 - 30, y: 50, w: 65, h: 22, l: '池子', c: '#00e5ff', v: 'WETH/USDC' },
+    { x: w - 90, y: 30, w: 65, h: 22, l: '用户收到', c: '#b388ff', v: '~$' + (24000 - loss).toLocaleString() },
+    { x: w - 90, y: 70, w: 65, h: 22, l: '策略方赚', c: '#ffab40', v: '~$' + profit.toLocaleString() },
+  ];
+
+  const fs = [
+    { f: 0, t: 2, c: 'rgba(105,240,174,0.3)', w: 20 },
+    { f: 1, t: 2, c: 'rgba(255,94,94,0.3)', w: 6 },
+    { f: 2, t: 3, c: 'rgba(179,136,255,0.3)', w: 16 },
+    { f: 2, t: 4, c: 'rgba(255,171,64,0.3)', w: 7 },
+  ];
+
+  fs.forEach(fl => {
+    const from = ns[fl.f], to = ns[fl.t];
+    ctx.strokeStyle = fl.c; ctx.lineWidth = fl.w; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(from.x + from.w, from.y + from.h / 2);
+    ctx.bezierCurveTo(from.x + from.w + 40, from.y + from.h / 2, to.x - 40, to.y + to.h / 2, to.x, to.y + to.h / 2);
+    ctx.stroke();
+  });
+
+  ns.forEach(n => {
+    ctx.fillStyle = n.c + '15'; ctx.strokeStyle = n.c; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(n.x, n.y, n.w, n.h, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = n.c; ctx.font = 'bold 9px Noto Sans SC'; ctx.textAlign = 'center';
+    ctx.fillText(n.l, n.x + n.w / 2, n.y + 11);
+    ctx.fillStyle = '#8b9bb4'; ctx.font = '7px JetBrains Mono';
+    ctx.fillText(n.v, n.x + n.w / 2, n.y + 19);
+  });
+}
+
+// ==================== EDU ====================
+let eduC, eduX;
+function initEduCanvas() {
+  eduC = document.getElementById('eduAmmCanvas');
+  if (!eduC) return;
+  eduX = eduC.getContext('2d');
+  const r = eduC.parentElement.getBoundingClientRect();
+  eduC.width = r.width - 32;
+}
+
+function updateEdu() {
+  if (!eduX) return;
+  const amt = parseInt(document.getElementById('eduAmount').value);
+  const dep = parseInt(document.getElementById('eduDepth').value);
+  document.getElementById('eduAmountVal').textContent = amt;
+  document.getElementById('eduDepthVal').textContent = dep.toLocaleString();
+  document.getElementById('eduSlippageVal').textContent = (document.getElementById('eduSlippage').value / 10).toFixed(1) + '%';
+
+  const ratio = amt / dep;
+  const slip = (ratio * 100 * 2.5).toFixed(1);
+  const profit = Math.round(amt * 2500 * ratio * 0.5);
+  const loss = Math.round(amt * 2500 * ratio * 0.18);
+  const impact = (ratio * 100 * 1.8).toFixed(1);
+
+  document.getElementById('eduSlip').textContent = slip + '%';
+  document.getElementById('eduProfit').textContent = '$' + profit.toLocaleString();
+  document.getElementById('eduLoss').textContent = '$' + loss.toLocaleString();
+  document.getElementById('eduImpact').textContent = impact + '%';
+
+  const w = eduC.width, h = eduC.height, ctx = eduX;
+  ctx.clearRect(0, 0, w, h);
+
+  const eduK = dep * dep;
+  ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let px = 35; px < w - 15; px += 2) {
+    const xV = (px - 35) / (w - 50) * dep * 2;
+    const yV = eduK / Math.max(xV, 1);
+    const py = h - 20 - (yV / (dep * 4)) * (h - 35);
+    if (py > 15 && py < h - 20) { if (px === 35) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  }
+  ctx.stroke();
+
+  const ux = 35 + (dep / (dep * 2)) * (w - 50);
+  const uy = h - 20 - ((eduK / dep) / (dep * 4)) * (h - 35);
+  ctx.fillStyle = '#69f0ae'; ctx.beginPath(); ctx.arc(ux, uy, 5, 0, Math.PI * 2); ctx.fill();
+
+  const nd = dep - amt * 0.5;
+  const ax = 35 + (nd / (dep * 2)) * (w - 50);
+  const ay = h - 20 - ((eduK / nd) / (dep * 4)) * (h - 35);
+  ctx.fillStyle = '#ff5e5e'; ctx.beginPath(); ctx.arc(ax, ay, 5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,94,94,0.4)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(ux, uy); ctx.lineTo(ax, ay); ctx.stroke();
+
+  ctx.fillStyle = '#ff5e5e'; ctx.font = '9px Noto Sans SC'; ctx.fillText('冲击 ' + impact + '%', ax - 20, ay - 10);
+}
+
+function loadEdu(type, el) {
+  document.querySelectorAll('.experiment-card').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const exps = {
+    sandwich: '<p><strong style="color:var(--cyan)">三明治策略</strong>就像排队买咖啡时有人插队：他先买了最后一杯，然后立刻高价转卖给你。</p><p>在区块链上，你的交易进入"等待区"（Mempool），机器人看到后立刻在你前后各插一笔交易。</p><p>试试拖动"交易金额"滑块——金额越大，红色点偏离绿色点越远，说明你亏得越多。</p>',
+    frontrun: '<p><strong style="color:var(--cyan)">抢跑策略</strong>利用区块链的公开特性。所有交易在被打包之前，都会先进入一个"等待区"，所有人都能看到。</p><p>策略方观测这个等待区，发现有利可图的交易后，付更高的 Gas 费让自己的交易排在你前面。</p>',
+    liquidity: '<p><strong style="color:var(--cyan)">流动性操纵</strong>是策略方临时向交易池注入或撤出大量资金，人为改变价格。</p><p>JIT（Just-In-Time）流动性是高级形式：策略方在你交易前瞬间注入资金赚取手续费，然后立即撤出。</p>',
+    jit: '<p><strong style="color:var(--cyan)">JIT 流动性</strong>是一种精密的 MEV 策略。策略方观测 mempool，发现大额交易即将执行时，在同一区块内瞬间注入大量流动性。</p><p>这样大额交易就会通过策略方提供的流动性执行，策略方赚取手续费后立即撤出资金，几乎零风险。</p>',
+    liquidation: '<p><strong style="color:var(--cyan)">清算归因</strong>发生在借贷协议（如 AAVE、Compound）中。当借款人的抵押品价值下跌，健康因子低于 1.0 时，任何人都可以清算其头寸。</p><p>清算机器人竞争运行清算归因，赚取清算奖励（通常是抵押品的 5-10%）。</p>',
+  };
+  document.getElementById('eduExplain').innerHTML = exps[type] || exps.sandwich;
+  updateEdu();
+}
+
+// ==================== REPORT CHARTS ====================
+function initReportCharts() {
+  initReportPie();
+  initReportRadar();
+  initReportWaterfall();
+}
+
+function initReportPie() {
+  const c = document.getElementById('reportPieCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width;
+  c.height = 200;
+
+  const data = [
+    { label: '三明治', value: 42, color: '#ff5e5e' },
+    { label: '套利', value: 28, color: '#ffab40' },
+    { label: 'JIT', value: 18, color: '#b388ff' },
+    { label: '清算', value: 12, color: '#448aff' },
+  ];
+
+  const cx = c.width / 2, cy = c.height / 2, radius = 70;
+  let startAngle = -Math.PI / 2;
+
+  data.forEach(d => {
+    const angle = (d.value / 100) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, startAngle, startAngle + angle);
+    ctx.closePath();
+    ctx.fillStyle = d.color + '30';
+    ctx.fill();
+    ctx.strokeStyle = d.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    startAngle += angle;
+  });
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 0.55, 0, Math.PI * 2);
+  ctx.fillStyle = '#0c1220';
+  ctx.fill();
+
+  ctx.fillStyle = '#f0f4f8';
+  ctx.font = 'bold 14px Noto Sans SC';
+  ctx.textAlign = 'center';
+  ctx.fillText('MEV', cx, cy - 5);
+  ctx.font = '10px Noto Sans SC';
+  ctx.fillStyle = '#8b9bb4';
+  ctx.fillText('类型分布', cx, cy + 12);
+}
+
+function initReportRadar() {
+  const c = document.getElementById('reportRadarCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width;
+  c.height = 220;
+
+  const cx = c.width / 2, cy = c.height / 2 + 5;
+  const radius = 75;
+  const labels = ['策略频率', '池子深度', 'Gas 竞争', '滑点容忍', '暴露程度'];
+  const values = [0.87, 0.45, 0.92, 0.78, 0.95];
+  const angleStep = (Math.PI * 2) / labels.length;
+
+  for (let i = 1; i <= 4; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(139,155,180,0.1)';
+    ctx.lineWidth = 1;
+    for (let j = 0; j <= labels.length; j++) {
+      const angle = j * angleStep - Math.PI / 2;
+      const x = cx + Math.cos(angle) * (radius * i / 4);
+      const y = cy + Math.sin(angle) * (radius * i / 4);
+      if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < labels.length; i++) {
+    const angle = i * angleStep - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.strokeStyle = 'rgba(139,155,180,0.15)';
+    ctx.stroke();
+
+    ctx.fillStyle = '#8b9bb4';
+    ctx.font = '9px Noto Sans SC';
+    ctx.textAlign = 'center';
+    const lx = cx + Math.cos(angle) * (radius + 18);
+    const ly = cy + Math.sin(angle) * (radius + 18);
+    ctx.fillText(labels[i], lx, ly + 3);
+  }
+
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const x = cx + Math.cos(angle) * (radius * v);
+    const y = cy + Math.sin(angle) * (radius * v);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,94,94,0.15)';
+  ctx.fill();
+  ctx.strokeStyle = '#ff5e5e';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  values.forEach((v, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const x = cx + Math.cos(angle) * (radius * v);
+    const y = cy + Math.sin(angle) * (radius * v);
+    ctx.fillStyle = '#ff5e5e';
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function initReportWaterfall() {
+  const c = document.getElementById('reportWaterfallCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width;
+  c.height = 180;
+
+  // Build waterfall from currentAttribution (aligned with AttributionResult)
+  const startVal = 24000;
+  const attacker = Math.round(Number(currentAttribution.attackerProfit) / 1e18 * 2450);
+  const lpFee = Math.round(Number(currentAttribution.lpFee) / 1e18 * 2450);
+  const gas = Math.round(Number(currentAttribution.validatorTip) / 1e18 * 2450);
+  const endVal = startVal - attacker - lpFee - gas;
+  const data = [
+    { label: '交易发起方投入', value: startVal, color: '#69f0ae', type: 'start' },
+    { label: '策略方利润', value: -attacker, color: '#ff5e5e', type: 'neg' },
+    { label: 'LP 手续费', value: -lpFee, color: '#ffab40', type: 'neg' },
+    { label: 'Gas 费', value: -gas, color: '#b388ff', type: 'neg' },
+    { label: '交易发起方实际收到', value: endVal, color: '#69f0ae', type: 'end' },
+  ];
+
+  const w = c.width, h = c.height;
+  const padL = 60, padR = 20, padT = 30, padB = 40;
+  const chartW = w - padL - padR;
+  const barW = chartW / data.length * 0.6;
+  const gap = chartW / data.length * 0.4;
+  const maxV = 26000;
+  const chartH = h - padT - padB;
+
+  // Draw axes
+  ctx.strokeStyle = 'rgba(139,155,180,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, h - padB);
+  ctx.lineTo(w - padR, h - padB);
+  ctx.stroke();
+
+  // Draw zero line
+  const zeroY = padT + chartH * (1 - endVal / maxV);
+  ctx.strokeStyle = 'rgba(139,155,180,0.1)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padL, zeroY);
+  ctx.lineTo(w - padR, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  let currentY = zeroY;
+  let currentVal = startVal;
+
+  data.forEach((d, i) => {
+    const x = padL + i * (barW + gap) + gap / 2;
+    let barH, barY;
+
+    if (d.type === 'start') {
+      barH = (d.value / maxV) * chartH;
+      barY = h - padB - barH;
+    } else if (d.type === 'end') {
+      barH = (d.value / maxV) * chartH;
+      barY = h - padB - barH;
+    } else {
+      barH = (Math.abs(d.value) / maxV) * chartH;
+      barY = currentY;
+    }
+
+    // Bar
+    ctx.fillStyle = d.color;
+    ctx.globalAlpha = 0.85;
+    roundRect(ctx, x, barY, barW, barH, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Connector line
+    if (i > 0 && i < data.length - 1) {
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + barW / 2, barY + barH);
+      ctx.lineTo(x + barW / 2 + gap / 2, barY + barH);
+      ctx.stroke();
+    }
+
+    // Label
+    ctx.fillStyle = '#8b9bb4';
+    ctx.font = '11px "Noto Sans SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.label, x + barW / 2, h - padB + 18);
+
+    // Value
+    ctx.fillStyle = d.color;
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.fillText(d.value > 0 ? `+${d.value}` : d.value, x + barW / 2, barY - 8);
+
+    if (d.type === 'neg') {
+      currentVal += d.value;
+    }
+  });
+
+  // Y-axis labels
+  ctx.fillStyle = '#5a6a82';
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 5; i++) {
+    const v = Math.round(maxV * i / 5);
+    const y = h - padB - (chartH * i / 5);
+    ctx.fillText(v.toLocaleString(), padL - 8, y + 3);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ============================================================
+//  REALTIME CLOCK
+// ============================================================
+let rtcBlockNum = 22180542;
+let rtcInterval;
+
+function startRealtimeClock() {
+  updateRTC();
+  rtcInterval = setInterval(updateRTC, 1000);
+  // Simulate block increment every ~12s (Ethereum avg block time)
+  setInterval(() => {
+    rtcBlockNum++;
+    const el = document.getElementById('rtcBlock');
+    if (el) el.textContent = '#' + rtcBlockNum;
+  }, 12100);
+}
+
+function updateRTC() {
+  const now = new Date();
+  const timeEl = document.getElementById('rtcTime');
+  const dateEl = document.getElementById('rtcDate');
+  if (timeEl) {
+    timeEl.textContent = now.toLocaleTimeString('en-GB', { hour12: false }) + ' UTC';
+  }
+  if (dateEl) {
+    dateEl.textContent = now.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+  }
+}
+
+// ============================================================
+//  LIQUIDATION MICROSCOPE
+// ============================================================
+let liqState = { liquidated: false, liqMode: 'panorama', panInterval: null };
+
+function switchLiqMode(mode) {
+  liqState.liqMode = mode;
+  document.getElementById('liqPanoramaView').style.display = mode === 'panorama' ? 'block' : 'none';
+  document.getElementById('liqFocusView').style.display = mode === 'focus' ? 'block' : 'none';
+  document.getElementById('liqModePanorama').classList.toggle('active', mode === 'panorama');
+  document.getElementById('liqModeFocus').classList.toggle('active', mode === 'focus');
+  if (mode === 'panorama') {
+    initLiqPanorama();
+  } else {
+    if (liqState.panInterval) clearInterval(liqState.panInterval);
+    updateLiq();
+  }
+}
+
+// ---- PANORAMA MODE ----
+function initLiqPanorama() {
+  drawLiqHeatmap();
+  drawLiqAmmMap();
+  startLiqMempool();
+  populateLiqRecentEvents();
+}
+
+function drawLiqHeatmap() {
+  const c = document.getElementById('liqHeatmapCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width - 32;
+  c.height = 280;
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 45, padR = 10, padT = 15, padB = 30;
+  const chartW = w - padL - padR;
+  const chartH = h - padT - padB;
+  const blocks = 24;
+  const bw = chartW / blocks;
+
+  // Generate fake heatmap data
+  const data = [];
+  for (let i = 0; i < blocks; i++) {
+    data.push(Math.floor(Math.random() * 8) + (i > 16 ? Math.floor(Math.random() * 6) : 0));
+  }
+  const maxV = Math.max(...data, 1);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(139,155,180,0.06)';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+  }
+
+  // Bars with heat color
+  data.forEach((v, i) => {
+    const bh = (v / maxV) * chartH;
+    const x = padL + i * bw + 1;
+    const intensity = v / maxV;
+    const r2 = Math.floor(255 * intensity);
+    const g = Math.floor(100 * (1 - intensity));
+    const b = Math.floor(80 * (1 - intensity));
+    const color = `rgba(${r2},${g},${b},0.8)`;
+
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = intensity > 0.5 ? 8 : 0;
+    roundRect(ctx, x, padT + chartH - bh, bw - 2, bh, 3);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Block label
+    ctx.fillStyle = '#5a6a82';
+    ctx.font = '8px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    if (i % 4 === 0) {
+      ctx.fillText('#' + (22180542 - blocks + i), x + bw / 2, h - padB + 12);
+    }
+  });
+
+  // Y axis
+  ctx.fillStyle = '#5a6a82';
+  ctx.font = '9px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = Math.round(maxV * (4 - i) / 4);
+    ctx.fillText(v, padL - 5, padT + (chartH / 4) * i + 3);
+  }
+
+  // Title
+  ctx.fillStyle = '#8b9bb4';
+  ctx.font = '9px "Noto Sans SC", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('清算笔数 / 区块', padL, padT - 3);
+}
+
+function drawLiqAmmMap() {
+  const c = document.getElementById('liqAmmMapCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width - 32;
+  c.height = 200;
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Simulate multiple AMM pools as circles
+  const pools = [
+    { name: 'WETH/USDC', x: 0.25, y: 0.4, size: 28, tvl: 420, disturbed: true },
+    { name: 'WBTC/ETH', x: 0.55, y: 0.3, size: 22, tvl: 180, disturbed: false },
+    { name: 'UNI/ETH', x: 0.75, y: 0.55, size: 18, tvl: 65, disturbed: true },
+    { name: 'LINK/ETH', x: 0.4, y: 0.7, size: 14, tvl: 32, disturbed: false },
+    { name: 'AAVE/ETH', x: 0.15, y: 0.65, size: 16, tvl: 45, disturbed: false },
+    { name: 'stETH/ETH', x: 0.85, y: 0.35, size: 20, tvl: 120, disturbed: false },
+    { name: 'DAI/USDC', x: 0.6, y: 0.7, size: 15, tvl: 55, disturbed: false },
+  ];
+
+  pools.forEach(p => {
+    const cx = p.x * w, cy = p.y * h;
+    const radius = p.size;
+
+    // Outer glow for disturbed pools
+    if (p.disturbed) {
+      const grad = ctx.createRadialGradient(cx, cy, radius, cx, cy, radius * 2.5);
+      grad.addColorStop(0, 'rgba(255,94,94,0.15)');
+      grad.addColorStop(1, 'rgba(255,94,94,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pulse ring
+      ctx.strokeStyle = 'rgba(255,94,94,0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 1.6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Pool circle
+    const color = p.disturbed ? 'rgba(255,94,94,0.6)' : 'rgba(0,229,255,0.15)';
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = p.disturbed ? 'rgba(255,94,94,0.8)' : 'rgba(0,229,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = p.disturbed ? '#ff5e5e' : '#8b9bb4';
+    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, cx, cy + radius + 14);
+    ctx.fillStyle = '#5a6a82';
+    ctx.font = '8px "JetBrains Mono", monospace';
+    ctx.fillText('$' + p.tvl + 'M', cx, cy + radius + 24);
+  });
+}
+
+function startLiqMempool() {
+  const container = document.getElementById('liqMempoolContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  // Generate compliant LendingPosition[] via makeLendingPosition()
+  const fakePending = Array.from({length: 5}, () => makeLendingPosition());
+  fakePending.forEach(pos => {
+    const isDanger = pos.healthFactor < 1.05;
+    const div = document.createElement('div');
+    div.className = 'mempool-lane ' + (isDanger ? 'sandwich' : 'normal');
+    div.style.animation = 'laneIn 0.4s ease-out';
+    div.innerHTML = `
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--sub)">${pos.user.slice(0,10)}...${pos.user.slice(-4)}</span>
+      <span style="font-size:0.72rem;color:var(--cyan)">${fmtEth(pos.collateralAmount)}</span>
+      <span style="font-size:0.72rem;color:var(--coral)">${fmtUsdc(pos.debtAmount)}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;color:${isDanger ? 'var(--coral)' : 'var(--lime)'}">HF ${pos.healthFactor.toFixed(2)}</span>
+      <span style="font-size:0.65rem;color:var(--muted);margin-left:auto">${pos.protocol}</span>
+    `;
+    container.appendChild(div);
+    // Emit WS liquidation event
+    wsClient.simulateLiquidationEvent({
+      user: pos.user, collateral: pos.collateralToken, debt: pos.debtToken,
+      hf: pos.healthFactor, protocol: pos.protocol, profit: 0
+    });
+  });
+}
+
+function populateLiqRecentEvents() {
+  const container = document.getElementById('liqRecentEvents');
+  if (!container) return;
+  container.innerHTML = '';
+  // Generate compliant events from LendingPosition[]
+  const positions = Array.from({length: 5}, () => makeLendingPosition());
+  const now = new Date();
+  const events = positions.map((pos, i) => ({
+    time: new Date(now - i * 300000).toLocaleTimeString('zh-CN', {hour12:false}),
+    type: pos.status === 'liquidated' ? '清算' : '预警',
+    protocol: pos.protocol,
+    user: pos.user.slice(0,6) + '...' + pos.user.slice(-4),
+    amount: fmtUsdc(pos.debtAmount),
+    collateral: fmtEth(pos.collateralAmount),
+    hf: pos.healthFactor.toFixed(2),
+    color: pos.status === 'liquidated' ? 'var(--coral)' : pos.status === 'danger' ? 'var(--amber)' : 'var(--lime)'
+  }));
+  // Add oracle updates
+  events.push(
+    { time: new Date(now - 600000).toLocaleTimeString('zh-CN',{hour12:false}), type: '预言机', protocol: 'Chainlink', user: 'ETH/USD', amount: '$2,580 → $2,420', collateral: '', hf: '', color: 'var(--amber)' },
+    { time: new Date(now - 900000).toLocaleTimeString('zh-CN',{hour12:false}), type: '预言机', protocol: 'Chainlink', user: 'ETH/USD', amount: '$2,650 → $2,580', collateral: '', hf: '', color: 'var(--amber)' }
+  );
+  events.forEach(e => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:0.5rem 0;border-bottom:1px solid var(--rule);animation:laneIn 0.3s ease-out';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.3rem;margin-bottom:0.2rem">
+        <span style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;color:var(--muted)">${e.time}</span>
+        <span style="font-size:0.65rem;padding:0.1rem 0.3rem;border-radius:3px;background:${e.color}20;color:${e.color};font-weight:700">${e.type}</span>
+        <span style="font-size:0.65rem;color:var(--muted)">${e.protocol}</span>
+      </div>
+      <div style="font-size:0.78rem;color:var(--sub)">${e.user} ${e.collateral ? '— ' + e.collateral : ''}</div>
+      <div style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:${e.color}">${e.amount}${e.hf ? ' | HF ' + e.hf : ''}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ---- FOCUS MODE ----
+async function setFocusPreset(type) {
+  const presets = {
+    whale: { addr: '0xWhale...d4A1', col: 450, debt: 950000, price: 2600 },
+    danger: { addr: '0xRisk...e7F2', col: 10, debt: 24000, price: 2600 },
+    safe: { addr: '0xSafe...a3C9', col: 50, debt: 50000, price: 2600 },
+    liquidated: { addr: '0xDead...0x00', col: 0, debt: 0, price: 2600 },
+  };
+  const p = presets[type];
+  document.getElementById('liqFocusAddress').value = p.addr;
+  document.getElementById('liqCollateral').value = p.col;
+  document.getElementById('liqDebt').value = p.debt;
+  document.getElementById('liqPrice').value = p.price;
+  liqState.liquidated = type === 'liquidated';
+  // Simulate anvil_impersonateAccount for the preset address
+  if (p.addr.startsWith('0x')) await anvilClient.impersonate(p.addr);
+  updateLiq();
+}
+
+async function loadFocusAddress() {
+  const addr = document.getElementById('liqFocusAddress').value;
+  if (addr && addr.startsWith('0x')) {
+    // Simulate anvil_impersonateAccount (aligned with Anvil RPC design)
+    await anvilClient.impersonate(addr);
+    // Fetch health factor via mock API
+    const health = await apiClient.getHealthFactor(addr, 'AaveV3');
+    if (health && health.hf) {
+      document.getElementById('liqPrice').value = health.liquidationPrice || 2600;
+    }
+  }
+  updateLiq();
+}
+
+function updateLiq() {
+  const col = parseFloat(document.getElementById('liqCollateral').value);
+  const debt = parseFloat(document.getElementById('liqDebt').value);
+  const price = parseFloat(document.getElementById('liqPrice').value);
+  const bonus = parseFloat(document.getElementById('liqBonus').value) / 100;
+  const ltv = parseFloat(document.getElementById('liqLtv').value) / 100;
+
+  document.getElementById('liqCollateralVal').textContent = col + ' ETH';
+  document.getElementById('liqDebtVal').textContent = '$' + debt.toLocaleString();
+  document.getElementById('liqPriceVal').textContent = '$' + price.toLocaleString();
+  document.getElementById('liqBonusVal').textContent = (bonus * 100).toFixed(0) + '%';
+  document.getElementById('liqLtvVal').textContent = (ltv * 100).toFixed(0) + '%';
+
+  const colValue = col * price;
+  const liquidationThreshold = 1 / ltv;
+  const hf = (colValue * liquidationThreshold) / debt;
+  const maxBorrow = colValue * ltv;
+  const liqPrice = hf > 0 ? (debt / (col * liquidationThreshold)) : 0;
+  const buffer = hf > 1 ? ((hf - 1) / hf * 100) : 0;
+  const clearance = price > 0 && liqPrice > 0 ? ((price - liqPrice) / price * 100) : 0;
+
+  document.getElementById('liqCollateralValue').textContent = '$' + colValue.toLocaleString();
+  document.getElementById('liqDebtValue').textContent = '$' + debt.toLocaleString();
+  document.getElementById('liqMaxBorrow').textContent = '$' + Math.round(maxBorrow).toLocaleString();
+  document.getElementById('liqLiquidationPrice').textContent = '$' + Math.round(liqPrice).toLocaleString();
+  document.getElementById('liqBuffer').textContent = buffer.toFixed(0) + '%';
+  document.getElementById('liqBuffer').style.color = buffer > 30 ? 'var(--lime)' : buffer > 10 ? 'var(--amber)' : 'var(--coral)';
+
+  // Clearance (how much % price can drop before liquidation)
+  const clearanceEl = document.getElementById('liqClearance');
+  if (clearanceEl) {
+    clearanceEl.textContent = clearance > 0 ? '↓' + clearance.toFixed(1) + '%' : '已低于清算线';
+    clearanceEl.style.color = clearance > 15 ? 'var(--lime)' : clearance > 5 ? 'var(--amber)' : 'var(--coral)';
+  }
+
+  // Red alert when HF < 1.05
+  const alertEl = document.getElementById('liqRedAlert');
+  if (alertEl) {
+    if (hf < 1.05 && hf > 0) {
+      alertEl.style.display = 'block';
+      const dropNeeded = ((price - liqPrice) / price * 100);
+      const estLoss = colValue - (debt / (1 / ltv));
+      document.getElementById('liqAlertTitle').textContent = hf <= 1 ? '紧急：已触发归因!' : '清算预警';
+      document.getElementById('liqAlertDesc').textContent = hf <= 1
+        ? 'HF = ' + hf.toFixed(2) + ' ≤ 1，策略方归因进行中，预计损失 $' + Math.round(Math.min(colValue, debt * 1.08)).toLocaleString()
+        : 'HF = ' + hf.toFixed(2) + '，再跌 ' + dropNeeded.toFixed(1) + '% 即触发归因，预计损失 ~$' + Math.round(Math.min(colValue * 0.08, debt * 0.08)).toLocaleString();
+    } else {
+      alertEl.style.display = 'none';
+    }
+  }
+
+  const hfEl = document.getElementById('liqHFDisplay');
+  hfEl.textContent = hf.toFixed(2);
+  hfEl.style.color = hf > 2 ? 'var(--lime)' : hf > 1.5 ? 'var(--cyan)' : hf > 1 ? 'var(--amber)' : 'var(--coral)';
+
+  if (!liqState.liquidated) {
+    const penalty = 500;
+    const seized = Math.min(debt * 1.05, colValue);
+    const liquidatorProfit = seized * bonus;
+    document.getElementById('liqUserLoss').textContent = '$0';
+    document.getElementById('liqLiquidatorProfit').textContent = '$0';
+    document.getElementById('liqProtocolFee').textContent = '$0';
+    document.getElementById('liqBadDebtAvoided').textContent = '$0';
+  }
+
+  drawLiqGauge(hf);
+  drawLiqCurve(col, debt, ltv);
+}
+
+function drawLiqGauge(hf) {
+  const c = document.getElementById('liqGaugeCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width - 32;
+  c.height = 200;
+  const w = c.width, h = c.height;
+  const cx = w / 2, cy = h - 20, radius = Math.min(w / 2 - 20, h - 40);
+
+  ctx.clearRect(0, 0, w, h);
+
+  const startAngle = Math.PI;
+  const endAngle = 2 * Math.PI;
+
+  // Background arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.strokeStyle = 'rgba(139,155,180,0.1)';
+  ctx.lineWidth = 16;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Danger zone (HF < 1)
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, startAngle + Math.PI * 0.2);
+  ctx.strokeStyle = 'rgba(255,94,94,0.3)';
+  ctx.lineWidth = 16;
+  ctx.stroke();
+
+  // Warning zone (HF 1-1.5)
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle + Math.PI * 0.2, startAngle + Math.PI * 0.4);
+  ctx.strokeStyle = 'rgba(255,171,64,0.2)';
+  ctx.lineWidth = 16;
+  ctx.stroke();
+
+  // Value arc
+  const hfClamped = Math.max(0, Math.min(hf, 3));
+  const valueAngle = startAngle + (hfClamped / 3) * Math.PI;
+  const color = hf > 2 ? '#69f0ae' : hf > 1.5 ? '#00e5ff' : hf > 1 ? '#ffab40' : '#ff5e5e';
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, valueAngle);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 16;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Labels
+  ctx.fillStyle = '#5a6a82';
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('0', cx - radius - 5, cy + 15);
+  ctx.textAlign = 'center';
+  ctx.fillText('1.5', cx, cy - radius - 8);
+  ctx.textAlign = 'right';
+  ctx.fillText('3.0', cx + radius + 5, cy + 15);
+
+  // Liquidation line
+  const liqAngle = startAngle + (1 / 3) * Math.PI;
+  const lx1 = cx + Math.cos(liqAngle) * (radius - 12);
+  const ly1 = cy + Math.sin(liqAngle) * (radius - 12);
+  const lx2 = cx + Math.cos(liqAngle) * (radius + 12);
+  const ly2 = cy + Math.sin(liqAngle) * (radius + 12);
+  ctx.strokeStyle = '#ff5e5e';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(lx1, ly1);
+  ctx.lineTo(lx2, ly2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ff5e5e';
+  ctx.font = 'bold 9px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('HF=1', lx1 - 4, ly1 + 3);
+}
+
+function drawLiqCurve(col, debt, ltv) {
+  const c = document.getElementById('liqCurveCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width - 32;
+  c.height = 220;
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 50, padR = 15, padT = 15, padB = 30;
+  const chartW = w - padL - padR;
+  const chartH = h - padT - padB;
+  const minP = 800, maxP = 4000;
+  const liquidationThreshold = 1 / ltv;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(139,155,180,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+  }
+
+  // HF curve
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(0,229,255,0.3)';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  let firstPoint = true;
+  for (let px = 0; px <= chartW; px += 2) {
+    const price = minP + (px / chartW) * (maxP - minP);
+    const hf = (col * price * liquidationThreshold) / debt;
+    const y = padT + chartH - (Math.min(hf, 4) / 4) * chartH;
+    if (firstPoint) { ctx.moveTo(padL + px, y); firstPoint = false; }
+    else ctx.lineTo(padL + px, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // HF=1 danger line
+  const dangerY = padT + chartH - (1 / 4) * chartH;
+  ctx.strokeStyle = 'rgba(255,94,94,0.4)';
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padL, dangerY);
+  ctx.lineTo(w - padR, dangerY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ff5e5e';
+  ctx.font = 'bold 10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('HF = 1 (清算线)', w - padR, dangerY - 5);
+
+  // Current price marker
+  const currentPrice = parseFloat(document.getElementById('liqPrice').value);
+  const markerX = padL + ((currentPrice - minP) / (maxP - minP)) * chartW;
+  const currentHF = (col * currentPrice * liquidationThreshold) / debt;
+  const markerY = padT + chartH - (Math.min(currentHF, 4) / 4) * chartH;
+
+  ctx.strokeStyle = currentHF > 1 ? '#69f0ae' : '#ff5e5e';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(markerX, padT);
+  ctx.lineTo(markerX, h - padB);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = currentHF > 1 ? '#69f0ae' : '#ff5e5e';
+  ctx.shadowColor = currentHF > 1 ? 'rgba(105,240,174,0.5)' : 'rgba(255,94,94,0.5)';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(markerX, markerY, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // X axis labels
+  ctx.fillStyle = '#5a6a82';
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  [1000, 1500, 2000, 2500, 3000, 3500].forEach(p => {
+    const x = padL + ((p - minP) / (maxP - minP)) * chartW;
+    ctx.fillText('$' + p, x, h - padB + 15);
+  });
+
+  // Y axis labels
+  ctx.textAlign = 'right';
+  [0, 1, 2, 3, 4].forEach(v => {
+    const y = padT + chartH - (v / 4) * chartH;
+    ctx.fillText(v.toFixed(0), padL - 8, y + 3);
+  });
+}
+
+function simulateLiqCrash() {
+  const slider = document.getElementById('liqPrice');
+  const target = 1800;
+  const start = parseFloat(slider.value);
+  const steps = 40;
+  let step = 0;
+  const crashInterval = setInterval(() => {
+    step++;
+    const v = start + (target - start) * (step / steps);
+    slider.value = v;
+    updateLiq();
+    if (step >= steps) clearInterval(crashInterval);
+  }, 50);
+}
+
+function executeLiquidation() {
+  const col = parseFloat(document.getElementById('liqCollateral').value);
+  const debt = parseFloat(document.getElementById('liqDebt').value);
+  const price = parseFloat(document.getElementById('liqPrice').value);
+  const bonus = parseFloat(document.getElementById('liqBonus').value) / 100;
+  const ltv = parseFloat(document.getElementById('liqLtv').value) / 100;
+  const hf = (col * price * (1 / ltv)) / debt;
+
+  if (hf > 1) {
+    const tl = document.getElementById('liqTimeline');
+    tl.innerHTML += '<div class="timeline-item" style="animation:laneIn 0.4s ease-out"><span class="tl-time">T+1</span><span class="tl-tag tag-success">拒绝</span><span class="tl-desc">HF = ' + hf.toFixed(2) + ' > 1，头寸安全，无法清算</span></div>';
+    return;
+  }
+
+  liqState.liquidated = true;
+  const colValue = col * price;
+  const maxSeize = Math.min(debt * 1.08, colValue);
+  const protocolFee = maxSeize * 0.05;
+  const liquidatorGets = maxSeize * bonus;
+  const userLoss = maxSeize + (debt - maxSeize > 0 ? 0 : debt - maxSeize);
+  const badDebtAvoided = debt;
+
+  document.getElementById('liqUserLoss').textContent = '$' + Math.round(maxSeize).toLocaleString();
+  document.getElementById('liqLiquidatorProfit').textContent = '$' + Math.round(liquidatorGets).toLocaleString();
+  document.getElementById('liqProtocolFee').textContent = '$' + Math.round(protocolFee).toLocaleString();
+  document.getElementById('liqBadDebtAvoided').textContent = '$' + Math.round(badDebtAvoided).toLocaleString();
+
+  const tl = document.getElementById('liqTimeline');
+  tl.innerHTML = '';
+  const steps = [
+    { time: 'T+0', tag: '初始', cls: 'tag-event', desc: '存入 ' + col + ' ETH ($' + (col * 2600).toLocaleString() + ')，借出 $' + debt.toLocaleString() + ' USDC' },
+    { time: 'T+1', tag: '暴跌', cls: 'tag-danger', desc: 'ETH $2,600 → $' + price.toLocaleString() + '，HF 降至 ' + hf.toFixed(2) + ' ≤ 1' },
+    { time: 'T+2', tag: '清算', cls: 'tag-danger', desc: '清算人 seized ' + (maxSeize / price).toFixed(2) + ' ETH ($' + Math.round(maxSeize).toLocaleString() + ')' },
+    { time: 'T+3', tag: '完成', cls: 'tag-success', desc: '清算人赚 $' + Math.round(liquidatorGets).toLocaleString() + '，协议收 $' + Math.round(protocolFee).toLocaleString() + ' 罚金' },
+  ];
+  steps.forEach((s, i) => {
+    setTimeout(() => {
+      tl.innerHTML += '<div class="timeline-item" style="animation:laneIn 0.4s ease-out"><span class="tl-time">' + s.time + '</span><span class="tl-tag ' + s.cls + '">' + s.tag + '</span><span class="tl-desc">' + s.desc + '</span></div>';
+    }, i * 600);
+  });
+}
+
+function resetLiq() {
+  liqState.liquidated = false;
+  document.getElementById('liqCollateral').value = 10;
+  document.getElementById('liqDebt').value = 15000;
+  document.getElementById('liqPrice').value = 2600;
+  document.getElementById('liqBonus').value = 8;
+  document.getElementById('liqLtv').value = 80;
+  document.getElementById('liqTimeline').innerHTML = '<div class="timeline-item"><span class="tl-time">T+0</span><span class="tl-tag tag-event">初始</span><span class="tl-desc">用户存入 10 ETH，借出 $15,000 USDC</span></div>';
+  updateLiq();
+}
+
+// ============================================================
+//  LP / IL MICROSCOPE
+// ============================================================
+let lpVersion = 'v2';
+
+function switchLPVersion(v) {
+  lpVersion = v;
+  const v2Btn = document.getElementById('lpV2Btn');
+  const v3Btn = document.getElementById('lpV3Btn');
+  const v3Params = document.getElementById('lpV3Params');
+  if (v === 'v2') {
+    v2Btn.style.borderColor = 'var(--cyan)'; v2Btn.style.background = 'rgba(0,229,255,0.1)'; v2Btn.style.color = 'var(--cyan)'; v2Btn.style.fontWeight = '700';
+    v3Btn.style.borderColor = 'var(--rule)'; v3Btn.style.background = 'var(--bg-card)'; v3Btn.style.color = 'var(--muted)'; v3Btn.style.fontWeight = '400';
+    v3Params.style.display = 'none';
+  } else {
+    v3Btn.style.borderColor = 'var(--cyan)'; v3Btn.style.background = 'rgba(0,229,255,0.1)'; v3Btn.style.color = 'var(--cyan)'; v3Btn.style.fontWeight = '700';
+    v2Btn.style.borderColor = 'var(--rule)'; v2Btn.style.background = 'var(--bg-card)'; v2Btn.style.color = 'var(--muted)'; v2Btn.style.fontWeight = '400';
+    v3Params.style.display = 'block';
+  }
+  updateLP();
+}
+
+function updateLP() {
+  const amt = parseFloat(document.getElementById('lpAmount').value);
+  const initP = parseFloat(document.getElementById('lpInitPrice').value);
+  const curP = parseFloat(document.getElementById('lpCurrentPrice').value);
+  const feeRate = parseFloat(document.getElementById('lpFee').value) / 10000;
+  const volume = parseFloat(document.getElementById('lpVolume').value) * 1e6;
+  const tickL = parseFloat(document.getElementById('lpTickLower').value);
+  const tickU = parseFloat(document.getElementById('lpTickUpper').value);
+
+  document.getElementById('lpAmountVal').textContent = amt + ' ETH';
+  document.getElementById('lpInitPriceVal').textContent = '$' + initP.toLocaleString();
+  document.getElementById('lpCurrentPriceVal').textContent = '$' + curP.toLocaleString();
+  document.getElementById('lpFeeVal').textContent = (feeRate * 100).toFixed(2) + '%';
+  document.getElementById('lpVolumeVal').textContent = '$' + (volume / 1e6).toFixed(0) + 'M';
+  document.getElementById('lpTickLowerVal').textContent = '$' + tickL.toLocaleString();
+  document.getElementById('lpTickUpperVal').textContent = '$' + tickU.toLocaleString();
+
+  const r = curP / initP;
+  const sqrtR = Math.sqrt(r);
+  const il = 2 * sqrtR / (1 + r) - 1;
+
+  const holdValue = amt * 2 * initP * (1 + r) / 2;
+  const lpValue = holdValue * (1 + il);
+  const feeIncome = volume * feeRate;
+  const netPnl = lpValue + feeIncome - holdValue;
+
+  document.getElementById('lpILPct').textContent = (il * 100).toFixed(2) + '%';
+  document.getElementById('lpILPct').style.color = il < -0.01 ? 'var(--coral)' : il === 0 ? 'var(--lime)' : 'var(--lime)';
+  document.getElementById('lpHoldValue').textContent = '$' + Math.round(holdValue).toLocaleString();
+  document.getElementById('lpLPValue').textContent = '$' + Math.round(lpValue).toLocaleString();
+  document.getElementById('lpFeeIncome').textContent = '$' + Math.round(feeIncome).toLocaleString();
+  document.getElementById('lpNetPnl').textContent = (netPnl >= 0 ? '+$' : '-$') + Math.round(Math.abs(netPnl)).toLocaleString();
+  document.getElementById('lpNetPnl').style.color = netPnl >= 0 ? 'var(--lime)' : 'var(--coral)';
+
+  document.getElementById('lpRatio').textContent = r.toFixed(2) + 'x';
+
+  if (lpVersion === 'v3') {
+    const range = tickU / tickL;
+    const fullRange = initP * 4 / (initP * 0.25);
+    const conc = Math.min(range / (initP / Math.sqrt(initP)), 10);
+    document.getElementById('lpConcentration').textContent = conc.toFixed(1) + 'x';
+    const breakEvenVol = Math.abs(il) > 0 ? Math.abs(holdValue * il) / feeRate : 0;
+    document.getElementById('lpBreakEven').textContent = breakEvenVol > 0 ? '$' + (breakEvenVol / 1e6).toFixed(1) + 'M' : '盈亏平衡';
+  } else {
+    document.getElementById('lpConcentration').textContent = '1.0x (全范围)';
+    const breakEvenVol = Math.abs(il) > 0 ? Math.abs(holdValue * il) / feeRate : 0;
+    document.getElementById('lpBreakEven').textContent = breakEvenVol > 0 ? '$' + (breakEvenVol / 1e6).toFixed(1) + 'M' : '盈亏平衡';
+  }
+
+  drawLPILCurve(initP, curP, tickL, tickU);
+  drawLPPnlChart(initP, amt, feeRate, volume);
+
+  // Async call to mock API for IL attribution (aligned with design doc)
+  apiClient.getILAttribution('0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8', '0xUser', 22180500, rtcBlockNum).then(res => {
+    // Optional: display a tiny "backend verified" indicator somewhere
+    console.log('[LP/IL] Backend attribution:', res);
+  });
+}
+
+function drawLPILCurve(initP, curP, tickL, tickU) {
+  const c = document.getElementById('lpILCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width - 32;
+  c.height = 260;
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const padL = 55, padR = 15, padT = 20, padB = 35;
+  const chartW = w - padL - padR;
+  const chartH = h - padT - padB;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(139,155,180,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+  }
+
+  // IL curve (V2)
+  ctx.strokeStyle = '#b388ff';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(179,136,255,0.3)';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  for (let px = 0; px <= chartW; px += 2) {
+    const priceRatio = 0.1 + (px / chartW) * 4.9;
+    const il = 2 * Math.sqrt(priceRatio) / (1 + priceRatio) - 1;
+    const y = padT + chartH / 2 - (il / 0.3) * (chartH / 2);
+    if (px === 0) ctx.moveTo(padL + px, y); else ctx.lineTo(padL + px, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // V3 concentrated IL (if v3)
+  if (lpVersion === 'v3') {
+    ctx.strokeStyle = '#ff5e5e';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(255,94,94,0.3)';
+    ctx.shadowBlur = 6;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    for (let px = 0; px <= chartW; px += 2) {
+      const priceRatio = 0.1 + (px / chartW) * 4.9;
+      const price = initP * priceRatio;
+      let il;
+      if (price < tickL || price > tickU) {
+        il = -1;
+      } else {
+        const baseIL = 2 * Math.sqrt(priceRatio) / (1 + priceRatio) - 1;
+        const conc = Math.sqrt(initP / tickL) * Math.sqrt(tickU / initP);
+        il = baseIL * conc;
+      }
+      const y = padT + chartH / 2 - (Math.max(-1, Math.min(0, il)) / 0.3) * (chartH / 2);
+      if (px === 0) ctx.moveTo(padL + px, y); else ctx.lineTo(padL + px, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+  }
+
+  // Zero line
+  ctx.strokeStyle = 'rgba(139,155,180,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + chartH / 2);
+  ctx.lineTo(w - padR, padT + chartH / 2);
+  ctx.stroke();
+
+  // Current price marker
+  const curRatio = curP / initP;
+  const markerX = padL + ((curRatio - 0.1) / 4.9) * chartW;
+  const curIL = 2 * Math.sqrt(curRatio) / (1 + curRatio) - 1;
+  const markerY = padT + chartH / 2 - (curIL / 0.3) * (chartH / 2);
+
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(markerX, padT);
+  ctx.lineTo(markerX, h - padB);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#00e5ff';
+  ctx.shadowColor = 'rgba(0,229,255,0.5)';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.arc(markerX, Math.max(padT, Math.min(h - padB, markerY)), 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Labels
+  ctx.fillStyle = '#5a6a82';
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('0.5x', padL, h - padB + 15);
+  ctx.fillText('1x', padL + (0.9 / 4.9) * chartW, h - padB + 15);
+  ctx.fillText('2x', padL + (1.9 / 4.9) * chartW, h - padB + 15);
+  ctx.fillText('3x', padL + (2.9 / 4.9) * chartW, h - padB + 15);
+  ctx.fillText('5x', padL + (4.9 / 4.9) * chartW, h - padB + 15);
+
+  ctx.textAlign = 'right';
+  ctx.fillText('-25%', padL - 5, padT + 5);
+  ctx.fillText('0%', padL - 5, padT + chartH / 2 + 3);
+  ctx.fillText('+25%', padL - 5, padT + chartH + 3);
+
+  // Legend
+  ctx.font = '10px "Noto Sans SC", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#b388ff';
+  ctx.fillRect(padL + 5, padT + 5, 12, 3);
+  ctx.fillText('V2 IL', padL + 22, padT + 10);
+  if (lpVersion === 'v3') {
+    ctx.fillStyle = '#ff5e5e';
+    ctx.fillRect(padL + 75, padT + 5, 12, 3);
+    ctx.fillText('V3 IL', padL + 92, padT + 10);
+  }
+}
+
+function drawLPPnlChart(initP, amt, feeRate, volume) {
+  const c = document.getElementById('lpPnlCanvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const r = c.parentElement.getBoundingClientRect();
+  c.width = r.width - 32;
+  c.height = 200;
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const curP = parseFloat(document.getElementById('lpCurrentPrice').value);
+  const ratio = curP / initP;
+  const il = 2 * Math.sqrt(ratio) / (1 + ratio) - 1;
+  const holdVal = amt * 2 * initP * (1 + ratio) / 2;
+  const lpVal = holdVal * (1 + il);
+  const feeIncome = volume * feeRate;
+  const netPnl = lpVal + feeIncome - holdVal;
+
+  const data = [
+    { label: 'HODL', value: holdVal, color: '#69f0ae' },
+    { label: 'LP 价值', value: lpVal, color: '#00e5ff' },
+    { label: '手续费', value: feeIncome, color: '#ffab40' },
+    { label: '净盈亏', value: Math.abs(netPnl), color: netPnl >= 0 ? '#69f0ae' : '#ff5e5e' },
+  ];
+
+  const maxV = Math.max(...data.map(d => d.value), 1);
+  const barW = (w - 40) / data.length - 12;
+  let x = 20;
+
+  data.forEach(d => {
+    const bh = (d.value / maxV) * (h - 45);
+    ctx.fillStyle = d.color + '20';
+    ctx.fillRect(x, h - 25 - bh, barW, bh);
+    ctx.strokeStyle = d.color;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, h - 25 - bh, barW, bh);
+    ctx.fillStyle = d.color;
+    ctx.font = 'bold 11px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('$' + (d.value / 1000).toFixed(1) + 'k', x + barW / 2, h - 30 - bh);
+    ctx.fillStyle = '#8b9bb4';
+    ctx.font = '9px "Noto Sans SC", sans-serif';
+    ctx.fillText(d.label, x + barW / 2, h - 8);
+    x += barW + 12;
+  });
+}
+
+function lpScenario(scenario) {
+  const initP = parseFloat(document.getElementById('lpInitPrice').value);
+  let target;
+  switch (scenario) {
+    case '2x': target = initP * 2; break;
+    case '0.5x': target = initP * 0.5; break;
+    case '5x': target = initP * 5; break;
+    case '0.2x': target = initP * 0.2; break;
+  }
+  const slider = document.getElementById('lpCurrentPrice');
+  slider.max = Math.max(8000, target * 1.2);
+  const start = parseFloat(slider.value);
+  const steps = 40;
+  let step = 0;
+  const anim = setInterval(() => {
+    step++;
+    slider.value = start + (target - start) * (step / steps);
+    updateLP();
+    if (step >= steps) clearInterval(anim);
+  }, 40);
+}
+
+// ============================================================
+//  STATUS UPDATES (stub for compatibility)
+// ============================================================
+function updateStatus() {
+  // Live page status updates are handled by drawLiveAmm loop
+}
+function updateForkStatus() {
+  // Fork status is updated by slider interactions
+}
+function updateForkAMM() {
+  initForkAmm();
+}
+function updateForkTrace() {
+  // Trace updates handled by replayFork
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  wsClient.connect();
+  initParticles();
+  initReportCharts();
+  initReportRadar();
+  initReportWaterfall();
+  updateReportAttribution();
+  startMempoolSimulation();
+  updateStatus();
+  updateForkStatus();
+  startForkMempool();
+  updateForkAMM();
+  updateForkTrace();
+  initEduCards();
+  startRealtimeClock();
+
+  // Loading screen
+  const loading = document.getElementById('loadingScreen');
+  if (loading) {
+    setTimeout(() => {
+      loading.style.opacity = '0';
+      loading.style.transition = 'opacity 0.8s ease';
+      setTimeout(() => loading.remove(), 800);
+    }, 2000);
+  }
+});
+
+window.addEventListener('resize', () => {
+  initParticles();
+  initReportCharts();
+  initReportRadar();
+  initReportWaterfall();
+});
+</script>
+</body>
+</html>
+

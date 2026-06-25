@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi 透明显微镜 | DeFi Transparency Microscope</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0e17;
+            --bg-mid: #111827;
+            --bg-surface: #1a2234;
+            --accent-cyan: #00e5ff;
+            --accent-amber: #ffab40;
+            --accent-coral: #ff6b6b;
+            --accent-lime: #69f0ae;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-subtle: rgba(148, 163, 184, 0.1);
+            --glass-bg: rgba(17, 24, 39, 0.7);
+            --glass-border: rgba(0, 229, 255, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.8;
+        }
+
+        /* === HERO SECTION === */
+        .hero {
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0, 229, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255, 171, 64, 0.06) 0%, transparent 50%),
+                var(--bg-deep);
+        }
+
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
+        }
+
+        .hero-particles {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
+            25% { transform: translateY(-30px) translateX(10px); opacity: 0.6; }
+            50% { transform: translateY(-15px) translateX(-15px); opacity: 0.4; }
+            75% { transform: translateY(-40px) translateX(5px); opacity: 0.5; }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 900px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 100px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .hero-title .accent {
+            color: var(--accent-cyan);
+            position: relative;
+            display: inline-block;
+        }
+
+        .hero-title .accent::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-cyan), transparent);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 3rem;
+            animation: fadeInUp 1s ease-out 0.6s both;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === SECTIONS === */
+        section {
+            padding: 6rem 2rem;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            margin-bottom: 4rem;
+        }
+
+        .section-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+        }
+
+        /* === PROBLEM SECTION === */
+        .problem-section {
+            background: var(--bg-mid);
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .problem-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .problem-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-coral), var(--accent-amber));
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .problem-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 107, 107, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .problem-card:hover::before {
+            opacity: 1;
+        }
+
+        .problem-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 107, 107, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .problem-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .problem-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 171, 64, 0.1));
+            border: 1px solid rgba(255, 107, 107, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        .highlight-box .big-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-coral), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .highlight-box p {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* === SOLUTION SECTION === */
+        .solution-section {
+            background: var(--bg-deep);
+        }
+
+        .solution-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            margin-bottom: 4rem;
+        }
+
+        .solution-text h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        .solution-text p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .solution-diagram {
+            position: relative;
+            height: 400px;
+            background: var(--bg-surface);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .diagram-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .chain-node {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0.75rem 0;
+            padding: 1rem 1.5rem;
+            background: var(--bg-mid);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 320px;
+            transition: all 0.3s ease;
+        }
+
+        .chain-node:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 229, 255, 0.05);
+        }
+
+        .chain-node .node-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .chain-node .node-info {
+            flex: 1;
+        }
+
+        .chain-node .node-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chain-node .node-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chain-connector {
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-lime));
+            opacity: 0.5;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--glass-border);
+            transform: translateY(-2px);
+        }
+
+        .feature-card .feature-tag {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent-lime);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .feature-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* === MARKET SECTION === */
+        .market-section {
+            background: var(--bg-mid);
+        }
+
+        .user-personas {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .persona-card {
+            background: var(--bg-surface);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            transition: all 0.4s ease;
+        }
+
+        .persona-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .persona-header {
+            padding: 2rem 2rem 1rem;
+            position: relative;
+        }
+
+        .persona-type {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 0.5rem;
+        }
+
+        .persona-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .persona-body {
+            padding: 0 2rem 2rem;
+        }
+
+        .persona-body ul {
+            list-style: none;
+        }
+
+        .persona-body li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .persona-body li:last-child {
+            border-bottom: none;
+        }
+
+        .persona-body li::before {
+            content: '→';
+            color: var(--accent-cyan);
+            font-family: 'Space Mono', monospace;
+            flex-shrink: 0;
+        }
+
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .use-case {
+            background: linear-gradient(135deg, var(--bg-surface), rgba(0, 229, 255, 0.03));
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .use-case::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .use-case-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: rgba(0, 229, 255, 0.15);
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .use-case h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .use-case p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* === VALUE SECTION === */
+        .value-section {
+            background: var(--bg-deep);
+            position: relative;
+        }
+
+        .value-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+        }
+
+        .value-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 3rem;
+        }
+
+        .value-block {
+            padding: 2rem;
+        }
+
+        .value-block h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .value-block h3 .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .value-block p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+        }
+
+        .value-list {
+            list-style: none;
+        }
+
+        .value-list li {
+            padding: 0.75rem 0;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .value-list li::before {
+            content: '◆';
+            color: var(--accent-lime);
+            font-size: 0.6rem;
+            margin-top: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        /* === DEMO SECTION === */
+        .demo-section {
+            background: var(--bg-mid);
+            text-align: center;
+        }
+
+        .demo-container {
+            background: var(--bg-surface);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .demo-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .demo-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .simulation-frame {
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: left;
+            position: relative;
+        }
+
+        .simulation-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .simulation-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-lime);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .simulation-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .simulation-body {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 2;
+        }
+
+        .sim-line {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .sim-line .timestamp {
+            color: var(--text-muted);
+            flex-shrink: 0;
+            width: 60px;
+        }
+
+        .sim-line .event {
+            color: var(--accent-cyan);
+        }
+
+        .sim-line .detail {
+            color: var(--text-secondary);
+        }
+
+        .sim-line .warning {
+            color: var(--accent-coral);
+        }
+
+        .sim-line .success {
+            color: var(--accent-lime);
+        }
+
+        /* === FOOTER === */
+        .footer {
+            background: var(--bg-deep);
+            border-top: 1px solid var(--border-subtle);
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .footer-logo .accent {
+            color: var(--accent-cyan);
+        }
+
+        .footer-tagline {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-cyan);
+        }
+
+        .footer-copy {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+        }
+
+        /* === SCROLL REVEAL === */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s ease-out;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .hero-stats {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .solution-visual {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .value-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-personas {
+                grid-template-columns: 1fr;
+            }
+
+            section {
+                padding: 4rem 1.5rem;
+            }
+        }
+
+        /* === CUSTOM SCROLLBAR === */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-surface);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-grid"></div>
+        <div class="hero-particles" id="particles"></div>
+        
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>Web3 基础设施创新方案</span>
+            </div>
+            <h1 class="hero-title">
+                DeFi <span class="accent">透明显微镜</span>
+            </h1>
+            <p class="hero-subtitle">
+                基于本地 EVM 分叉的交互式链上仿真与可视化分析平台<br>
+                解构 MEV 黑箱，重建 DeFi 信任
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value">$1.5B+</span>
+                    <span class="stat-label">累计 MEV 提取 (2022–2024)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">$60M/yr</span>
+                    <span class="stat-label">三明治攻击年度损失</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">60K–90K</span>
+                    <span class="stat-label">月均三明治攻击笔数</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="problem-section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-number">01 / 行业痛点</span>
+                <h2 class="section-title">信息不对称与黑箱化危机</h2>
+                <p class="section-desc">
+                    DeFi 协议层正陷入一场结构性信任危机。MEV（最大可提取价值）已从技术奇点演变为系统性风险——据 Flashbots 与 ESMA 联合追踪，以太坊 Merge 后至 2024 年中累计提取 MEV 超 526,207 ETH（约 $1.1B），而 2024 全年跨链 MEV 总量突破 $1.5B。然而，这笔隐形税收的 90% 以上由少数搜索者（Searcher）与区块构建者（Block Builder）瓜分，普通用户既无法感知掠夺发生，更缺乏防御基础设施。
+                </p>
+            </div>
+
+            <div class="problem-grid">
+                <div class="problem-card reveal">
+                    <div class="problem-icon">🔒</div>
+                    <h3>黑箱化执行</h3>
+                    <p>MEV 提取发生在毫秒级 Mempool 博弈与 PBS（Proposer-Builder Separation）暗箱中。用户无法观测交易的真实执行路径，更无法验证私有订单流（Private Order Flow）是否被区块构建者二次剥削。</p>
+                </div>
+                <div class="problem-card reveal">
+                    <div class="problem-icon">⚔️</div>
+                    <h3>不对称博弈</h3>
+                    <p>据 2025 年 arXiv 研究，仅 19 家主要搜索者即提取了 $233.8M CEX-DEX 套利价值，前三家垄断约 75% 的套利量。零售用户处于结构性劣势，每笔交易都面临三明治攻击、抢跑与清算掠夺。</p>
+                </div>
+                <div class="problem-card reveal">
+                    <div class="problem-icon">📉</div>
+                    <h3>信任成本高昂</h3>
+                    <p>ESMA 2025 年 7 月报告明确指出：MEV "严重损害市场公平与投资者保护原则"。用户无法验证 RPC 服务商是否暗中抢跑，也无法理解交易 revert 背后的掠夺逻辑，DeFi 信任赤字持续扩大。</p>
+                </div>
+            </div>
+
+            <div class="highlight-box reveal">
+                <div class="big-number">$1,500,000,000+</div>
+                <p>2024 年跨链 MEV 累计提取总值（Flashbots / BTCC Research）— 其中三明治攻击年度用户损失约 $60M，月均攻击频次 60,000–90,000 笔</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOLUTION -->
+    <section class="solution-section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-number">02 / 产品方案</span>
+                <h2 class="section-title">DeFi 世界的飞行数据记录仪</h2>
+                <p class="section-desc">
+                    DTM 并非交易终端，而是链上微观结构实验室（On-chain Microstructure Lab）。基于本地 EVM 分叉（Anvil/Ganache 级状态克隆），用户可在零资产风险环境下，对任意历史区块进行高保真攻击复现、MEV 提取路径回溯与交易前风险预演。
+                </p>
+            </div>
+
+            <div class="solution-visual reveal">
+                <div class="solution-text">
+                    <h3>本地 EVM 分叉仿真</h3>
+                    <p>
+                        DTM 基于 Foundry Anvil 本地 EVM 分叉，完整复刻主网状态树与存储槽。用户可在完全隔离的私链环境中，重放任意历史区块交易，精确观测 MEV 攻击的完整执行轨迹——从 Mempool 注入、Gas 竞价（PGA）到区块打包的全链路。
+                    </p>
+                    <p>
+                        区别于 Etherscan 等仅展示最终状态的区块浏览器，DTM 将复杂的 EVM 执行轨迹（Stack / Memory / Storage 变化）降维至直观的 AMM 曲线变动、资金流向图与 Gas 消耗热力图。不可见的掠夺行为由此变得可被观测、可被度量、可被教育——这正是 ESMA 呼吁的 "MEV 透明度基础设施"。
+                    </p>
+                </div>
+                <div class="solution-diagram">
+                    <div class="diagram-content">
+                        <div class="chain-node">
+                            <div class="node-icon" style="background: rgba(0, 229, 255, 0.15);">🔗</div>
+                            <div class="node-info">
+                                <div class="node-label">主网状态快照</div>
+                                <div class="node-value">Fork at Block #22,180,000+</div>
+                            </div>
+                        </div>
+                        <div class="chain-connector"></div>
+                        <div class="chain-node">
+                            <div class="node-icon" style="background: rgba(255, 171, 64, 0.15);">⚡</div>
+                            <div class="node-info">
+                                <div class="node-label">交易注入</div>
+                                <div class="node-value">Simulate User Swap</div>
+                            </div>
+                        </div>
+                        <div class="chain-connector"></div>
+                        <div class="chain-node">
+                            <div class="node-icon" style="background: rgba(255, 107, 107, 0.15);">🔍</div>
+                            <div class="node-info">
+                                <div class="node-label">MEV 检测</div>
+                                <div class="node-value">Sandwich Attack Detected</div>
+                            </div>
+                        </div>
+                        <div class="chain-connector"></div>
+                        <div class="chain-node">
+                            <div class="node-icon" style="background: rgba(105, 240, 174, 0.15);">📊</div>
+                            <div class="node-info">
+                                <div class="node-label">可视化报告</div>
+                                <div class="node-value">Loss: -2.4% | Route: Unsafe</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card reveal">
+                    <span class="feature-tag">Core Feature</span>
+                    <h4>🔬 高保真攻击复现</h4>
+                    <p>基于 Foundry Anvil 本地分叉，精确重放三明治攻击、JIT 流动性掠夺、CEX-DEX 套利等 MEV 策略。支持单笔交易级 Stack Trace 与 Storage Diff 分析，还原每一笔交易的微观结构。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <span class="feature-tag">Core Feature</span>
+                    <h4>📈 实时 AMM 曲线可视化</h4>
+                    <p>将 Uniswap V3 集中流动性、Curve 稳定币池等复杂 AMM 的变动转化为动态曲线动画。直观展示滑点冲击、价格操纵、套利空间与无常损失的实时演化。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <span class="feature-tag">Core Feature</span>
+                    <h4>🛡️ 交易前风险预演</h4>
+                    <p>Pre-Trade Simulation：用户在签名前导入交易参数，DTM 模拟该交易在公开 Mempool 与私有订单流中的命运，提前预警三明治攻击、抢跑与滑点风险。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <span class="feature-tag">Core Feature</span>
+                    <h4>🎓 交互式金融教育</h4>
+                    <p>将 PBS、Gas 竞价（PGA）、意图层（Intent Layer）等抽象概念转化为可操作的实验场景。为高校区块链课程、开发者社区与合规培训提供动态可视化教具。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MARKET -->
+    <section class="market-section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-number">03 / 目标用户</span>
+                <h2 class="section-title">从捕食者到猎物，再到裁判</h2>
+                <p class="section-desc">
+                    当前 MEV 基础设施高度偏向"提取端"：Flashbots、MEV-Boost、Searcher Bot 等工具均为套利者服务。DTM 是全球首个面向"用户端"与"教育端"的 MEV 透明度基础设施，填补监管（ESMA / SEC）反复呼吁却无人响应的市场空白。
+                </p>
+            </div>
+
+            <div class="user-personas">
+                <div class="persona-card reveal">
+                    <div class="persona-header">
+                        <div class="persona-type">C 端用户</div>
+                        <h3 class="persona-title">普通用户与研究员</h3>
+                    </div>
+                    <div class="persona-body">
+                        <ul>
+                            <li>日均交易 &gt; 3 笔、对滑点敏感的中高阶 DeFi 活跃用户</li>
+                            <li>需要可复现实验环境的 Web3 安全研究员与审计师</li>
+                            <li>希望在签名前验证交易安全性的机构级投资者与 DAO 财库管理者</li>
+                            <li>关注 MEV 监管动态、需要合规报告的 Legal &amp; Compliance 团队</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="persona-card reveal">
+                    <div class="persona-header">
+                        <div class="persona-type">B 端用户</div>
+                        <h3 class="persona-title">基础设施与教育者</h3>
+                    </div>
+                    <div class="persona-body">
+                        <ul>
+                            <li>寻求差异化安全功能、降低用户投诉率的钱包 / DEX 聚合器（如 MetaMask、1inch、CowSwap）</li>
+                            <li>亟需动态可视化教具的 Top 50 高校区块链课程与开发者社区</li>
+                            <li>需要 Pre-Trade Simulation API 的合规金融机构与托管服务商</li>
+                            <li>面临 MiCA / SEC 监管审查、需 MEV 披露基础设施的协议方与交易所</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header reveal" style="margin-top: 4rem;">
+                <span class="section-number">04 / 应用场景</span>
+                <h2 class="section-title">三大核心场景</h2>
+            </div>
+
+            <div class="use-cases">
+                <div class="use-case reveal">
+                    <div class="use-case-number">01</div>
+                    <h4>交易风控</h4>
+                    <p>Pre-Trade Risk Engine：用户在签名前导入交易参数，DTM 模拟该交易在公开 Mempool 与私有订单流中的命运——是否会被夹、滑点冲击几何、是否存在更优路由。输出结构化风险评分（0–100）与缓解建议。</p>
+                </div>
+                <div class="use-case reveal">
+                    <div class="use-case-number">02</div>
+                    <h4>协议审计</h4>
+                    <p>上线前 MEV 压力测试：项目方在部署新 AMM、清算机制或 Intent Layer 前，利用 DTM 模拟极端行情（如 LUNA/UST 级脱锚）下的 MEV 提取攻击面，量化协议脆弱点与潜在用户损失。</p>
+                </div>
+                <div class="use-case reveal">
+                    <div class="use-case-number">03</div>
+                    <h4>金融教育</h4>
+                    <p>监管合规培训：在高校课程、开发者 Workshop 与机构合规培训中，将 PBS、三明治攻击、CEX-DEX 套利等抽象概念转化为可交互实验。满足 ESMA / MiCA 对加密资产市场透明度教育的隐性要求。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VALUE -->
+    <section class="value-section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-number">05 / 价值与意义</span>
+                <h2 class="section-title">可验证的信任</h2>
+                <p class="section-desc">
+                    DTM 重新定义了 DeFi 的透明度标准。我们提出的不仅是工具，更是响应 ESMA 2025 年监管呼吁、推动行业从"盲目投机"走向"理性认知"的关键基础设施。在 MiCA 框架逐步落地的背景下，MEV 披露与透明度将成为合规硬要求。
+                </p>
+            </div>
+
+            <div class="value-grid">
+                <div class="value-block reveal">
+                    <h3>
+                        <span class="icon" style="background: rgba(0, 229, 255, 0.1);">🎓</span>
+                        技术壁垒与教育普惠
+                    </h3>
+                    <p>
+                        DTM 填补了全球 DeFi 教育市场的结构性空白。据 ESMA 报告，MEV "严重损害市场公平"，但现有教育工具几乎为零。DTM 将复杂 EVM 执行轨迹降维至直观界面，降低认知门槛的同时，为监管机构提供了可量化的透明度基础设施。
+                    </p>
+                    <ul class="value-list">
+                        <li>毫秒级 Mempool 博弈 → 慢动作回放 + Stack Trace</li>
+                        <li>PBS / Intent Layer / CEX-DEX 套利 → 可交互实验</li>
+                        <li>降低 Web3 安全审计与合规报告的技术门槛</li>
+                        <li>推动行业知识民主化，响应 MiCA 透明度要求</li>
+                    </ul>
+                </div>
+                <div class="value-block reveal">
+                    <h3>
+                        <span class="icon" style="background: rgba(105, 240, 174, 0.1);">🏗️</span>
+                        基础设施赋能
+                    </h3>
+                    <p>
+                        DTM 作为中间件（Middleware），可抽象为标准化 Pre-Trade Simulation API 与 MEV 披露 SDK，无缝集成至钱包、DEX 聚合器与托管服务商前端。在监管合规（MiCA / SEC）趋严的背景下，这是构建品牌护城河的战略级基础设施。
+                    </p>
+                    <ul class="value-list">
+                        <li>Pre-Trade Risk Score（0–100）API，赋能钱包差异化竞争</li>
+                        <li>MEV Shield SDK，为用户提供交易级保护</li>
+                        <li>合规级 MEV 披露报告，满足监管审计要求</li>
+                        <li>B2B SaaS + API 双轮驱动，极高商业化延展性</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DEMO -->
+    <section class="demo-section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-number">06 / 仿真演示</span>
+                <h2 class="section-title">实时交易模拟</h2>
+                <p class="section-desc">
+                    以下演示展示 DTM 如何捕获并可视化一笔典型的三明治攻击。
+                </p>
+            </div>
+
+            <div class="demo-container reveal">
+                <h3 class="demo-title">🥪 三明治攻击检测仿真</h3>
+                <div class="simulation-frame">
+                    <div class="simulation-header">
+                        <div class="simulation-dot"></div>
+                        <span class="simulation-label">Live Simulation — Block 22180500 | Network: Ethereum Mainnet | 2026-06-23</span>
+                    </div>
+                    <div class="simulation-body">
+                        <div class="sim-line">
+                            <span class="timestamp">T+0ms</span>
+                            <span class="event">[FORK]</span>
+                            <span class="detail">主网状态快照完成 @ Block 22180500，Gas: 8.4 gwei</span>
+                        </div>
+                        <div class="sim-line">
+                            <span class="timestamp">T+12ms</span>
+                            <span class="event">[TX_IN]</span>
+                            <span class="detail">用户交易: Swap 10 ETH → USDC</span>
+                        </div>
+                        <div class="sim-line">
+                            <span class="timestamp">T+15ms</span>
+                            <span class="warning">[ALERT]</span>
+                            <span class="detail">检测到 Mempool 中的前置交易 (Front-run)</span>
+                        </div>
+                        <div class="sim-line">
+                            <span class="timestamp">T+18ms</span>
+                            <span class="event">[SIM]</span>
+                            <span class="detail">执行用户交易... 滑点: 2.4% (预期: 0.5%)</span>
+                        </div>
+                        <div class="sim-line">
+                            <span class="timestamp">T+21ms</span>
+                            <span class="warning">[ALERT]</span>
+                            <span class="detail">检测到后置交易 (Back-run) 完成套利</span>
+                        </div>
+                        <div class="sim-line">
+                            <span class="timestamp">T+25ms</span>
+                            <span class="success">[REPORT]</span>
+                            <span class="detail">攻击者利润: $1,240 | 用户额外损失: 1.9% | 风险评分: 87/100 (高危)</span>
+                        </div>
+                        <div class="sim-line">
+                            <span class="timestamp">T+30ms</span>
+                            <span class="success">[ADVICE]</span>
+                            <span class="detail">建议: 启用 Flashbots Protect / 拆分订单 / 切换至私有订单流 (MEV-Share)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-logo">
+            DeFi <span class="accent">透明显微镜</span>
+        </div>
+        <p class="footer-tagline">
+            解构 MEV 黑箱，重建 DeFi 信任<br>
+            透明即正义
+        </p>
+        <div class="footer-links">
+            <a href="#">产品文档</a>
+            <a href="#">GitHub</a>
+            <a href="#">社区</a>
+            <a href="#">联系我们</a>
+        </div>
+        <p class="footer-copy">
+            DeFi Transparency Microscope (DTM) — 2026 | Data Sources: Flashbots, ESMA, arXiv, EigenPhi, Dune Analytics
+        </p>
+    </footer>
+
+    <script>
+        // Generate particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            particle.style.animationDuration = (6 + Math.random() * 4) + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        // Scroll reveal
+        const revealElements = document.querySelectorAll('.reveal');
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+
+        revealElements.forEach(el => revealObserver.observe(el));
+
+        // Smooth scroll for footer links
+        document.querySelectorAll('.footer-links a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+            });
+        });
+    </script>
+</body>
+</html>
