@@ -1,5 +1,42 @@
-/* LpIlPage layout — three columns. */
+/* LpIlPage layout — two columns with a top title and a bottom
+   ExplainBox + formula row.  Mobile collapses to a single column. */
 
+.dtm-lpil-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dtm-lpil-page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--dtm-cyan);
+  border-bottom: 1px solid var(--dtm-rule);
+  padding-bottom: var(--space-2);
+}
+
+.dtm-lpil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dtm-lpil-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dtm-lpil-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The existing canvas + class hooks from the previous layout are
+   still useful for the per-panel visuals.  Keep the old .dtm-lp-il-grid
+   selector available as an alias in case other components reference it. */
 .dtm-lp-il-grid {
   display: grid;
   grid-template-columns: 1fr 1.2fr 1fr;
@@ -19,10 +56,10 @@
   }
 }
 
-.dtm-canvas-il {
+.dtm-canvas-pnl {
   display: block;
   width: 100%;
-  height: 360px;
+  height: 220px;
   background: var(--color-bg);
   border-radius: var(--radius-sm);
 }
