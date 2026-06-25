@@ -61,7 +61,6 @@ export function RealtimeClock({
       }
     }, blockIntervalMs);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [block, blockIntervalMs, localBlock, setStoreBlock]);
 
   const ts = Math.floor(now / 1000);
