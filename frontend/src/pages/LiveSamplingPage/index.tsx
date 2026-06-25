@@ -19,14 +19,14 @@ import { ExplainBox, Panel } from '@/components/common';
 import { draw as drawAmmCurve } from '@/canvas/AmmCurve';
 import { useCanvas } from '@/canvas/useCanvas';
 import { useLiveStore } from '@/store/liveStore';
-import { MockAPI } from '@/services/mockApi';
+import { currentAPI } from '@/services';
 import type { MockTransaction } from '@/mocks/transactions';
 import type { Pool } from '@/types';
 import { Inspector } from './Inspector';
 import { SandwichFeed } from './SandwichFeed';
 import './LiveSamplingPage.css';
 
-const api = new MockAPI();
+const api = currentAPI;
 const TICK_MS = 1500;
 
 export function LiveSamplingPage() {

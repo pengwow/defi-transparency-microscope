@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from 'react';
 import type { ExperimentPreset } from '@/services/api';
-import { MockAPI } from '@/services/mockApi';
+import { currentAPI } from '@/services';
 import { getAmountOut } from '@/algorithms/cpmm';
 import { simulateSandwich } from '@/algorithms/sandwich';
 import { formatUsd } from '@/utils/format';
@@ -98,7 +98,7 @@ export function CompareView({ scenario }: CompareViewProps) {
 
       // For IL or attribution scenarios, run a single result via MockAPI
       // and present the summary stats as the 3-branch comparison.
-      const api = new MockAPI();
+      const api = currentAPI;
       try {
         if (config.name.toLowerCase().includes('il')) {
           const res = await api.runIlExperiment({
