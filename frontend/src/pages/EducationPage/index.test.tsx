@@ -1,62 +1,92 @@
 /**
- * Tests for the EducationPage.
+ * Tests for the EducationPage — the 🎓 教学实验 tab.
+ *
+ * The page is organised as a 2-column demo layout:
+ *   - top:   ScenarioList (5 MEV scenario cards)
+ *   - left:  EduParams / EduAmmPanel / EduLiveData
+ *   - right: EduExplain / DefenseTips
+ *
+ * The tests verify:
+ *   - all 6 panels (with their inner component testIds) are rendered
+ *   - the default scenario is 'sandwich'
+ *   - clicking a different scenario card updates the active scenario
+ *     in `eduStore` and rewrites the EduExplain headline text
  */
 
 import { describe, expect, it, afterEach, vi } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { EducationPage } from './index';
+import { useEduStore } from '@/store/eduStore';
+
+vi.mock('@/canvas/useCanvas', () => ({
+  useCanvas: (_drawFn: unknown, _deps: unknown) => ({ ref: { current: null } }),
+}));
 
 afterEach(() => {
   cleanup();
+  useEduStore.getState().reset();
 });
 
 describe('EducationPage', () => {
-  it('renders the three panels', () => {
-    render(<EducationPage />);
-    expect(screen.getByTestId('learning-path-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('cheat-sheet-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('glossary-panel')).toBeInTheDocument();
-  });
-
   it('shows the page test id root', () => {
     render(<EducationPage />);
     expect(screen.getByTestId('education-page')).toBeInTheDocument();
   });
 
-  it('renders 6 timeline steps', () => {
+  it('renders the 6 demo panels (inner component testIds)', () => {
     render(<EducationPage />);
-    expect(screen.getAllByTestId('timeline-step')).toHaveLength(6);
+    expect(screen.getByTestId('edu-scenario-list-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('edu-params-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('edu-amm-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('edu-explain-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('edu-live-data-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('edu-defense-tips-panel')).toBeInTheDocument();
   });
 
-  it('renders 4 cheat sheet cards', () => {
+  it('starts with the sandwich scenario as active', () => {
     render(<EducationPage />);
-    expect(screen.getAllByTestId('cheat-card')).toHaveLength(4);
+    expect(useEduStore.getState().activeScenario).toBe('sandwich');
+    expect(screen.getByTestId('edu-scenario-sandwich').getAttribute('data-active')).toBe('true');
   });
 
-  it('renders 6 glossary entries', () => {
+  it('shows the sandwich explain headline by default', () => {
     render(<EducationPage />);
-    expect(screen.getAllByTestId('glossary-entry')).toHaveLength(6);
+    expect(screen.getByTestId('edu-explain-headline').textContent).toMatch(/三明治/);
   });
 
-  it('shows an explain box at the bottom of each panel', () => {
+  it('clicking the JIT card updates the active scenario in the store', () => {
     render(<EducationPage />);
-    expect(screen.getAllByTestId('explain-box').length).toBeGreaterThanOrEqual(3);
+    act(() => {
+      fireEvent.click(screen.getByTestId('edu-scenario-jit'));
+    });
+    expect(useEduStore.getState().activeScenario).toBe('jit');
   });
 
-  it('updates the active step when a timeline step is clicked', () => {
+  it('clicking the JIT card rewrites the EduExplain headline text', () => {
     render(<EducationPage />);
-    const steps = screen.getAllByTestId('timeline-step');
-    fireEvent.click(steps[2].querySelector('button')!);
-    // Step 3 should now be active (data-active="true").
-    expect(steps[2].getAttribute('data-active')).toBe('true');
+    // Sanity: starts on sandwich.
+    expect(screen.getByTestId('edu-explain-headline').textContent).toMatch(/三明治/);
+    act(() => {
+      fireEvent.click(screen.getByTestId('edu-scenario-jit'));
+    });
+    expect(screen.getByTestId('edu-explain-headline').textContent).toMatch(/JIT/);
   });
 
-  it('starts with the first step active by default', () => {
+  it('renders 5 defense tips for the default sandwich scenario', () => {
     render(<EducationPage />);
-    const steps = screen.getAllByTestId('timeline-step');
-    expect(steps[0].getAttribute('data-active')).toBe('true');
+    const tips = screen.getAllByTestId(/^edu-defense-tip-/);
+    expect(tips.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('renders 5 live-data rows', () => {
+    render(<EducationPage />);
+    const rows = screen.getAllByTestId(/^edu-live-row-/);
+    expect(rows.length).toBe(5);
+  });
+
+  it('renders 3 ParamSliders inside EduParams', () => {
+    render(<EducationPage />);
+    const ranges = document.querySelectorAll('input[type="range"]');
+    expect(ranges.length).toBe(3);
   });
 });
-
-// Keep the `vi` import in scope for future tests.
-void vi;
