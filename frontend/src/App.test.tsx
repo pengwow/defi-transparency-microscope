@@ -56,10 +56,10 @@ describe('App', () => {
     });
   });
 
-  it('lands on the dashboard (report) page by default', async () => {
+  it('lands on the live page by default', async () => {
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByTestId('report-summary-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('amm-curve-panel')).toBeInTheDocument();
     });
   });
 
@@ -68,9 +68,10 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByTestId('app-header')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('tab', { name: /实时采样/ }));
+    // Click the 报告 (report) tab to navigate from the default live page.
+    fireEvent.click(screen.getByRole('tab', { name: /报告/ }));
     await waitFor(() => {
-      expect(screen.getByTestId('amm-curve-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('report-summary-panel')).toBeInTheDocument();
     });
   });
 

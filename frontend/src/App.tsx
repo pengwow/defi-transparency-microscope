@@ -3,10 +3,11 @@
  *
  * Wires together:
  *   1. Initial data load (live store, position store, experiment store)
- *   2. A loading screen while data is being fetched
- *   3. The Header / ModeBar / NavTabs chrome
- *   4. A page-level router keyed off `uiStore.page`
- *   5. ErrorBoundary + FlashAlert to catch and surface runtime issues
+ *   2. The full demo chrome: ParticleBackground + LensTransition
+ *   3. The Header (with 一键实验 pill) / NavTabs / page router
+ *   4. The floating RealtimeClock + ModeBar in the header right slot
+ *   5. The FlashAlert overlay with "放入显微镜" action
+ *   6. An ErrorBoundary wrapping the whole tree
  *
  * The data layer is the in-memory `MockAPI` for now; swapping to a
  * real RPC-backed implementation means changing only the import.
@@ -18,9 +19,9 @@ import {
   FlashAlert,
   Header,
   LensTransition,
-  LoadingScreen,
   ModeBar,
   NavTabs,
+  ParticleBackground,
   RealtimeClock,
 } from '@/components/common';
 import { useExperimentStore } from '@/store/experimentStore';
@@ -28,6 +29,7 @@ import { useLiveStore } from '@/store/liveStore';
 import { usePositionStore } from '@/store/positionStore';
 import { useUiStore, type Page } from '@/store/uiStore';
 import { MockAPI } from '@/services/mockApi';
+import { runDemo, type DemoKind } from '@/services/demoScript';
 import { spotPriceE18 } from '@/algorithms/cpmm';
 import { EducationPage } from '@/pages/EducationPage';
 import { ForkExperimentPage } from '@/pages/ForkExperimentPage';
@@ -35,50 +37,27 @@ import { LiquidationPage } from '@/pages/LiquidationPage';
 import { LpIlPage } from '@/pages/LpIlPage';
 import { LiveSamplingPage } from '@/pages/LiveSamplingPage';
 import { ReportPage } from '@/pages/ReportPage';
-import type { NavTabId } from '@/components/common';
 
 const api = new MockAPI();
 
 /** Maps the canonical Page enum to a React component. */
 const PAGES: Record<Page, () => JSX.Element> = {
-  dashboard: ReportPage,
-  mempool: LiveSamplingPage,
-  transactions: EducationPage,
-  lending: LiquidationPage,
-  positions: LpIlPage,
-  experiments: ForkExperimentPage,
+  live: LiveSamplingPage,
+  fork: ForkExperimentPage,
+  liquidation: LiquidationPage,
+  lpil: LpIlPage,
+  edu: EducationPage,
+  report: ReportPage,
   settings: ReportPage, // unmapped — fall back to the report.
 };
-
-/**
- * Bridge: translate the demo tab IDs (live / fork / …) into the
- * historical Page enum used by `uiStore`.  The Page enum is
- * scheduled to be renamed in a later batch; for now we just map.
- */
-function tabIdToPage(id: NavTabId): Page {
-  switch (id) {
-    case 'live':
-      return 'mempool';
-    case 'fork':
-      return 'experiments';
-    case 'liquidation':
-      return 'lending';
-    case 'lpil':
-      return 'positions';
-    case 'edu':
-      return 'transactions';
-    case 'report':
-      return 'dashboard';
-    default:
-      return id;
-  }
-}
 
 export function App() {
   const page = useUiStore((s) => s.page);
   const mode = useUiStore((s) => s.mode);
+  const demoRunning = useUiStore((s) => s.demoRunning);
   const setMode = useUiStore((s) => s.setMode);
   const setPage = useUiStore((s) => s.setPage);
+  const dismissFlashAlert = useUiStore((s) => s.dismissFlashAlert);
   const [ready, setReady] = useState(false);
 
   // Initial data load.
@@ -126,17 +105,31 @@ export function App() {
     };
   }, []);
 
+  const runDemoHandler = (kind: DemoKind) => () => {
+    void runDemo(kind);
+  };
+
+  const enterMicroscope = async () => {
+    dismissFlashAlert();
+    await runDemo('microscope');
+  };
+
+  // While loading, just render the background (avoid the loading
+  // screen which would be immediately covered by the particle field).
   if (!ready) {
-    return <LoadingScreen />;
+    return <ParticleBackground />;
   }
 
   const CurrentPage = PAGES[page] ?? ReportPage;
 
   return (
     <ErrorBoundary>
+      <ParticleBackground />
       <LensTransition>
         <div className="dtm-app" data-testid="app-root">
           <Header
+            onStartDemo={runDemoHandler('auto')}
+            demoRunning={demoRunning}
             right={
               <>
                 <RealtimeClock />
@@ -144,11 +137,11 @@ export function App() {
               </>
             }
           />
-          <NavTabs active={page} onSelect={(id) => setPage(tabIdToPage(id))} />
+          <NavTabs active={page} onSelect={setPage} />
           <main className="dtm-app-main" data-testid="app-main">
             <CurrentPage />
           </main>
-          <FlashAlert onEnterMicroscope={() => undefined} />
+          <FlashAlert onEnterMicroscope={enterMicroscope} />
         </div>
       </LensTransition>
     </ErrorBoundary>
