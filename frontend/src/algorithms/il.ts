@@ -46,9 +46,10 @@ export function calculateV3IL(
   if (!Number.isFinite(pu) || pu <= 0) throw new Error('INVALID_PRICE_UPPER');
   if (pl > pu) throw new Error('INVALID_RANGE');
 
-  // Degenerate range ⇒ fall back to V2 (concentration = 1).
-  let c = concentration;
-  if (pl === pu) c = 1;
+  // Degenerate range ⇒ fall back to V2 of the current price (concentration = 1).
+  if (pl === pu) return calculateV2IL(p);
+
+  const c = concentration;
   if (c <= 0) throw new Error('INVALID_CONCENTRATION');
 
   if (p < pl || p > pu) {

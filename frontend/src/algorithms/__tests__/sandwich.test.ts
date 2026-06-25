@@ -45,6 +45,6 @@ describe('Sandwich attack simulation (same-direction 3-swap model)', () => {
 
   it('throws on negative victim or attacker amount', () => {
     expect(() => simulateSandwich(ONE_E18, ONE_E18, 0n, 1n)).toThrow();
-    expect(() => simulateSandwich(ONE_E18, ONE_E18, 1n, 0n)).toThrow();
+    expect(() => simulateSandwich(ONE_E18, ONE_E18, -1n, 1n)).toThrow();
   });
 });

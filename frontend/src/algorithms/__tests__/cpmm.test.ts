@@ -69,9 +69,12 @@ describe('CPMM (Uniswap V2 constant product)', () => {
   });
 
   describe('priceImpactE18', () => {
-    it('is 0 for trivially small trade', () => {
-      const impact = priceImpactE18(1n, ONE_E21, ONE_E21);
-      expect(impact).toBe(0n);
+    it('is at least the fee (>= ~0.3%) for any non-zero input', () => {
+      // 0.3% fee is baked into the price impact
+      const impact = priceImpactE18(10n ** 15n, ONE_E21, ONE_E21);
+      expect(impact).toBeGreaterThan(0n);
+      // impact should be small (close to 0.3%) for small trade
+      expect(impact).toBeLessThan(10n ** 16n); // < 1%
     });
 
     it('is positive for large trade and < 100% (1e18)', () => {

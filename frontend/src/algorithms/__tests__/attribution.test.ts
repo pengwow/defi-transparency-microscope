@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   attributeProfit,
   componentsToObject,
-  AttributeKey,
-  type AttributionResult,
+  type AttributeKey,
 } from '../attribution';
 
 const E18 = 10n ** 18n;
@@ -46,13 +45,19 @@ describe('Profit attribution', () => {
     });
 
     it('percentages sum to 1 (or all zero) for positive total', () => {
+      // Use only additive components (no gasCost) so the sum of |components|
+      // equals |total| and the percentages are well-defined and sum to 1.
       const r = attributeProfit({
         priceImpact: 50n * E18,
         fees: 25n * E18,
-        gasCost: 15n * E18,
+        gasCost: 0n,
         rebates: 10n * E18,
       });
-      const sum = r.percentages.priceImpact + r.percentages.fees + r.percentages.gasCost + r.percentages.rebates;
+      const sum =
+        r.percentages.priceImpact +
+        r.percentages.fees +
+        r.percentages.gasCost +
+        r.percentages.rebates;
       expect(sum).toBeCloseTo(1.0, 6);
     });
 

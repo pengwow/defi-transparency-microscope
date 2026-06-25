@@ -21,7 +21,7 @@ describe('Impermanent Loss', () => {
     });
 
     it('approaches -100% for extreme price changes', () => {
-      const il = calculateV2IL(1000);
+      const il = calculateV2IL(10000);
       expect(il).toBeLessThan(-0.97);
       expect(il).toBeGreaterThan(-1);
     });

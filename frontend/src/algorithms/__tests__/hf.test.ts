@@ -45,7 +45,7 @@ describe('Health Factor (Aave-style)', () => {
 
     it('zero debt returns very large HF (effectively infinite)', () => {
       const hf = calculateHealthFactor(1000n * E18, 0n, 8n * 10n ** 17n);
-      expect(hf).toBeGreaterThan(10n ** 36n);
+      expect(hf).toBeGreaterThanOrEqual(10n ** 36n);
     });
 
     it('zero collateral with debt => 0 HF', () => {

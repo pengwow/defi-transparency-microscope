@@ -75,6 +75,19 @@ export function simulateSandwich(
   if (victimAmountIn <= 0n) throw new Error('INSUFFICIENT_VICTIM_AMOUNT');
   if (attackerAmountIn < 0n) throw new Error('INSUFFICIENT_ATTACKER_AMOUNT');
 
+  // No attacker input ⇒ nothing to do, all step outputs are zero.
+  if (attackerAmountIn === 0n) {
+    return {
+      attackerSpent: 0n,
+      attackerReceived: 0n,
+      attackerProfit: 0n,
+      victimLoss: 0n,
+      step1AmountOut: 0n,
+      step2AmountOut: 0n,
+      step3AmountOut: 0n,
+    };
+  }
+
   // Step 1 — attacker frontrun: token0 -> token1
   const step1AmountOut = getAmountOutWithFeeBps(
     attackerAmountIn,
