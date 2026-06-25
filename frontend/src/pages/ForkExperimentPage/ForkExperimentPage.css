@@ -1,0 +1,14 @@
+/* ForkExperimentPage layout — two columns. */
+
+.dtm-fork-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .dtm-fork-grid {
+    grid-template-columns: 1fr;
+  }
+}
