@@ -34,3 +34,6 @@ export { FlashAlert } from './FlashAlert';
 
 export { ExplainBox } from './ExplainBox';
 export type { ExplainBoxProps } from './ExplainBox';
+
+export { ParticleBackground } from './ParticleBackground';
+export type { ParticleBackgroundProps } from './ParticleBackground';

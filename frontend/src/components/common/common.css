@@ -541,3 +541,22 @@
   width: 0%;
   animation: dtm-loadProgress 2s ease-out forwards;
 }
+
+/* ============================================================
+ * Batch 3 — DTM_Demo port (Phase 1.9-1.13)
+ *
+ * Styles for the new ParticleBackground, the floating RealtimeClock
+ * widget, the demo-shaped FlashAlert, and the 4-stage LensTransition.
+ * All classes use the .dtm- prefix.  Existing rules above are kept
+ * untouched so older code paths remain green during the transition.
+ * ============================================================ */
+
+/* ----- ParticleBackground ----- */
+.dtm-particle-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+}
