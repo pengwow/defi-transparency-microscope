@@ -83,7 +83,6 @@ export function makeTransaction(type?: TxType): DemoTransaction {
     hash,
     from: '0x' + hex(40),
     to: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
-    value: 0n,
     gasUsed: 150_000n,
     gasPrice: 25_000_000_000n,
     type: t,

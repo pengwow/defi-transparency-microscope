@@ -66,11 +66,14 @@ export function MempoolLanes({ onEnterMicroscope }: MempoolLanesProps) {
   useEffect(() => {
     const id = setInterval(() => {
       const tx = makeTransaction();
+      // Map the demo "arbitrage" type into the store's "arb" token.
+      const storeType: 'sandwich' | 'arb' | 'jit' | 'liquidation' | 'normal' =
+        tx.mevType === 'arbitrage' ? 'arb' : (tx.mevType as 'sandwich' | 'jit' | 'liquidation' | 'normal');
       const entry = {
         hash: tx.hash,
         from: tx.from,
         timestamp: tx.timestamp,
-        mevType: tx.mevType,
+        mevType: storeType,
         gasPrice: tx.gasPrice,
       };
       pushTx(entry);
