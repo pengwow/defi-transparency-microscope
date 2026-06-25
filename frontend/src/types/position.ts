@@ -66,4 +66,10 @@ export interface LendingPosition {
   /** Current liquidation threshold (0..1, scaled by 1e18). */
   liquidationThresholdE18: bigint;
   timestamp: number;
+  /** Optional demo field — collateralisation health factor (0..N). */
+  healthFactor?: number;
+  /** Optional demo field — price at which the position is liquidated. */
+  liquidationPrice?: number;
+  /** Optional demo field — bucketed health status. */
+  status?: 'safe' | 'warning' | 'danger' | 'liquidated';
 }
