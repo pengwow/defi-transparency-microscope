@@ -38,7 +38,7 @@ import { LpIlPage } from '@/pages/LpIlPage';
 import { LiveSamplingPage } from '@/pages/LiveSamplingPage';
 import { ReportPage } from '@/pages/ReportPage';
 
-const api = currentAPI;
+const api = new MockAPI();
 
 /** Maps the canonical Page enum to a React component. */
 const PAGES: Record<Page, () => JSX.Element> = {
