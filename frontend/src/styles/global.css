@@ -83,6 +83,22 @@ pre,
   color: var(--color-text-dim);
 }
 
+/* App shell layout. */
+.dtm-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.dtm-app-main {
+  flex: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
