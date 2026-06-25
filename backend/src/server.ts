@@ -13,6 +13,7 @@ import healthRoute from './routes/health.js';
 import poolsRoute from './routes/pools.js';
 import transactionsRoute from './routes/transactions.js';
 import positionsRoute from './routes/positions.js';
+import experimentsRoute from './routes/experiments.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -127,6 +128,7 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   await app.register(poolsRoute, { prefix: '/api/v1' });
   await app.register(transactionsRoute, { prefix: '/api/v1' });
   await app.register(positionsRoute, { prefix: '/api/v1' });
+  await app.register(experimentsRoute, { prefix: '/api/v1' });
 
   return app as unknown as FastifyInstance;
 }
