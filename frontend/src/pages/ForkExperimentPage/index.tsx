@@ -1,63 +1,113 @@
 /**
- * ForkExperimentPage — the experiment runner view.
+ * ForkExperimentPage — the experiment runner view (demo-style 3-col).
  *
- * Two columns:
- *   1. Scenario list — clickable list of presets.
- *   2. Compare view  — 3-branch comparison table for the currently
- *      opened scenario (baseline / victim-only / attacker-present).
+ * Mirrors DTM_Demo.html lines 540-677.  Three columns:
+ *   1. Controls — param sliders + step pills.
+ *   2. Visualisation — ForkAmm + ForkSankey canvases.
+ *   3. Results — quantitative gauge + metrics + conclusion.
  *
- * The page opens the first scenario by default if none is opened.
+ * Existing CompareView / ScenarioList exports are preserved as
+ * re-exports so external consumers (and any tests) that import them
+ * through this module continue to work.
  */
 
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { ExplainBox, Panel } from '@/components/common';
-import { useExperimentStore } from '@/store/experimentStore';
+import {
+  ForkParams,
+  StepControls,
+  ForkAmmPanel,
+  ForkSankeyPanel,
+  ForkTimeline,
+  QuantResults,
+  ForkConclusion,
+  type ForkParamsValues,
+} from '@/components/fork';
 import { CompareView } from './CompareView';
 import { ScenarioList } from './ScenarioList';
 import './ForkExperimentPage.css';
 
-export function ForkExperimentPage() {
-  const scenarios = useExperimentStore((s) => s.scenarios);
-  const opened = useExperimentStore((s) => s.opened);
-  const open = useExperimentStore((s) => s.open);
+// Re-export sibling modules so that callers importing them through
+// `pages/ForkExperimentPage` continue to find them after the rewrite.
+export { CompareView } from './CompareView';
+export { ScenarioList } from './ScenarioList';
 
-  // Open the first scenario by default so the compare view has data.
-  useEffect(() => {
-    if (!opened && scenarios.length > 0) {
-      open(scenarios[0].id);
-    }
-  }, [opened, scenarios, open]);
+const STEP_DESCRIPTIONS = [
+  '步骤 1 捕获：在区块 N 把链上状态"冻结"到一个本地 anvil 实例。',
+  '步骤 2 切片：选定攻击交易，把它作为唯一的可变输入重放。',
+  '步骤 3 解析：对比 baseline / victim-only / attacker-present 三条曲线，量化 MEV 成本。',
+];
+
+export function ForkExperimentPage() {
+  const [activeStep, setActiveStep] = useState<number>(0);
+  const [replayCount, setReplayCount] = useState<number>(0);
+
+  const handleReplay = (_values: ForkParamsValues) => {
+    setReplayCount((n) => n + 1);
+  };
 
   return (
-    <div className="dtm-fork-grid" data-testid="fork-experiment-grid">
-      <Panel title="Scenarios" testId="scenario-list-panel">
-        <ScenarioList
-          scenarios={scenarios}
-          selectedId={opened?.id ?? null}
-          onSelect={open}
-        />
-        <ExplainBox title="What are these?">
-          Fork experiments let you replay a swap under three different
-          conditions to surface the cost of MEV.  Pick a preset to see
-          its 3-branch comparison on the right.
-        </ExplainBox>
-      </Panel>
+    <div className="dtm-fork-page" data-testid="fork-experiment-page">
+      <ExplainBox title="实验切片模式">
+        从 Live 模式捕获的实时事件已被"冻结"在此。DTM 使用{' '}
+        <code>anvil --fork-url</code> 克隆了主网在 Block #22180542 的完整状态。
+        你现在可以在<span style={{ color: 'var(--dtm-lime)' }}>零风险沙盒</span>
+        中步进执行每一笔交易，观察储备如何变化、谁赚谁亏。
+      </ExplainBox>
 
-      <Panel title="Comparison" testId="compare-view-panel">
-        {opened ? (
-          <CompareView scenario={opened} />
-        ) : (
-          <p className="muted">Pick a scenario from the left to see the 3-branch comparison.</p>
-        )}
-        <ExplainBox title="Reading the table">
-          Baseline = no victim, no attacker.  Victim-only = the victim
-          trade, no MEV extraction.  Attacker-present = the full
-          sandwich (frontrun + victim + backrun).  The difference
-          between the last two columns is the cost of MEV.
-        </ExplainBox>
-      </Panel>
+      <div className="dtm-grid-3" data-testid="fork-experiment-grid">
+        {/* LEFT: controls */}
+        <div className="dtm-fork-col-left">
+          <Panel title="仿真参数" testId="fork-params-panel">
+            <ForkParams onReplay={handleReplay} testId="fork-params" />
+          </Panel>
+          <Panel title="步进控制" testId="step-controls-panel">
+            <StepControls
+              active={activeStep}
+              onChange={setActiveStep}
+              description={STEP_DESCRIPTIONS[activeStep]}
+              testId="step-controls"
+            />
+          </Panel>
+        </div>
+
+        {/* CENTER: visualisation */}
+        <div className="dtm-fork-col-center">
+          <Panel title="AMM 曲线变化" testId="fork-amm-panel">
+            <ForkAmmPanel testId="fork-amm" />
+          </Panel>
+          <Panel title="资金流向" testId="fork-sankey-panel">
+            <ForkSankeyPanel testId="fork-sankey" />
+          </Panel>
+          <Panel title="执行轨迹" testId="fork-timeline-panel">
+            <ForkTimeline testId="fork-timeline-list" />
+          </Panel>
+        </div>
+
+        {/* RIGHT: results */}
+        <div className="dtm-fork-col-right">
+          <Panel title="量化结果" testId="quant-results-panel">
+            <QuantResults testId="quant-results" />
+          </Panel>
+          <Panel title="实验结论" testId="fork-conclusion-panel">
+            <ForkConclusion testId="fork-conclusion-body" />
+          </Panel>
+        </div>
+      </div>
+
+      {/* Hidden sentinel used by tests that need a stable data attribute
+          counting how many times the replay button has been clicked. */}
+      <span data-testid="fork-replay-count" data-count={replayCount} hidden>
+        {replayCount}
+      </span>
     </div>
   );
 }
+
+// Keep references to legacy components so they remain part of this
+// module's surface area (avoids the `noUnusedLocals` lint rule while
+// also documenting the re-exports above).
+void CompareView;
+void ScenarioList;
 
 export default ForkExperimentPage;

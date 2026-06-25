@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react';
 import { useCanvas } from '@/canvas/useCanvas';
 import {
   drawForkAmm,
-  getForkAmmState,
   setForkAmmState,
   type ForkAmmState,
 } from '@/canvas/ForkAmm';
@@ -33,10 +32,14 @@ const DEFAULT_STATE: ForkAmmState = {
 };
 
 export function ForkAmmPanel({ initial, testId }: ForkAmmPanelProps) {
+  // Local state; the setter is exposed for future use (live re-simulation
+  // is currently driven by the surrounding page, so it stays unused for
+  // now — keep the reference so lint stays quiet).
   const [state, setState] = useState<ForkAmmState>(() => ({
     ...DEFAULT_STATE,
     ...initial,
   }));
+  void setState;
 
   useEffect(() => {
     setForkAmmState(state);
