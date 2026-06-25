@@ -39,18 +39,18 @@ export function LpIlPage() {
           <Panel title="快速场景" testId="lpil-scenarios-panel-wrapper">
             <LpScenarios />
           </Panel>
-          <Panel title="池子状态" testId="pool-state-panel">
+          <Panel title="池子状态" testId="pool-state-panel-wrapper">
             <PoolStatePanel />
           </Panel>
         </div>
         <div className="dtm-lpil-col dtm-lpil-col-right">
-          <Panel title="IL 机理曲线" testId="il-curve-panel">
+          <Panel title="IL 机理曲线" testId="il-curve-panel-wrapper">
             <IlCurvePanel />
           </Panel>
-          <Panel title="IL-费 归因盈亏" testId="il-pnl-panel">
+          <Panel title="IL-费 归因盈亏" testId="il-pnl-panel-wrapper">
             <IlPnlPanel />
           </Panel>
-          <Panel title="关键指标" testId="il-metrics-panel">
+          <Panel title="关键指标" testId="il-metrics-panel-wrapper">
             <IlMetrics />
           </Panel>
         </div>
