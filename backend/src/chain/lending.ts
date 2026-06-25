@@ -98,13 +98,16 @@ const SAMPLE_POSITIONS: ReadonlyArray<Omit<LendingPosition, 'timestamp'>> = [
 
 /**
  * Return the curated list of Aave V3 lending positions, stamped with the
- * current epoch second as `timestamp`. The provider is accepted for v2
- * forward-compat (live reads via `getUserReserveData`); in v1 it's
- * unused — we deliberately do not call it.
+ * current epoch second as `timestamp`. The provider is used for a
+ * minimal liveness ping in v1; v2 will switch to live reads via
+ * `getUserReserveData`.
  */
 export async function listLendingPositions(
-  _provider: ChainProvider,
+  provider: ChainProvider,
 ): Promise<LendingPosition[]> {
+  // v1 liveness ping so the route can surface provider failures as 502.
+  // v2 will replace this with real getUserReserveData reads.
+  await provider.getBlockNumber();
   const timestamp = Math.floor(Date.now() / 1000);
   return SAMPLE_POSITIONS.map((p) => ({ ...p, timestamp }));
 }

@@ -121,11 +121,14 @@ const SAMPLE_POSITIONS: ReadonlyArray<Omit<LPPosition, 'timestamp'>> = [
 
 /**
  * Return the curated list of V3 LP positions, stamped with the current
- * epoch second as `timestamp`. The provider is accepted for v2 forward
- * compat (live reads via `NonfungiblePositionManager.positions(tokenId)`)
- * and is unused in v1.
+ * epoch second as `timestamp`. The provider is used for a minimal
+ * liveness ping in v1; v2 will switch to live reads via
+ * `NonfungiblePositionManager.positions(tokenId)`.
  */
-export async function listLpPositions(_provider: ChainProvider): Promise<LPPosition[]> {
+export async function listLpPositions(provider: ChainProvider): Promise<LPPosition[]> {
+  // v1 liveness ping so the route can surface provider failures as 502.
+  // v2 will replace this with real NonfungiblePositionManager reads.
+  await provider.getBlockNumber();
   const timestamp = Math.floor(Date.now() / 1000);
   return SAMPLE_POSITIONS.map((p) => ({ ...p, timestamp }));
 }

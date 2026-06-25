@@ -1,34 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { buildServer } from '../../src/server.js';
-import type { ChainHealthSource } from '../../src/routes/health.js';
 
-function makeChainSource(overrides: Partial<ChainHealthSource> = {}): ChainHealthSource {
-  return {
-    getBlockNumber: vi.fn(async () => 19_500_000),
-    isWebSocketConnected: vi.fn(() => true),
-    ...overrides,
-  };
-}
+import { buildTestApp } from '../helpers/buildTestApp.js';
 
 describe('GET /api/v1/health', () => {
   let app: FastifyInstance;
-  let chain: ChainHealthSource;
+  let close: () => Promise<void>;
 
   beforeEach(async () => {
-    chain = makeChainSource();
-    app = await buildServer({
-      config: {
-        rpcUrl: 'https://example.invalid',
-        rpcWsUrl: null,
-        port: 8000,
-        chainId: 1,
-        logLevel: 'silent',
-        cacheTtlMs: 5000,
-      },
-      chainSource: chain,
+    const result = await buildTestApp({
+      stub: { blockNumber: 19_500_000 },
+      wsHealth: { isWebSocketConnected: () => true },
     });
-    await app.ready();
+    app = result.app;
+    close = () => app.close();
   });
 
   it('returns 200 with status, chain, blockNumber, wsConnected', async () => {
@@ -62,73 +47,57 @@ describe('GET /api/v1/health', () => {
     expect(typeof body.wsConnected).toBe('boolean');
   });
 
-  it('reflects wsConnected=false when the chain source reports so', async () => {
-    await app.close();
-    chain = makeChainSource({ isWebSocketConnected: vi.fn(() => false) });
-    app = await buildServer({
-      config: {
-        rpcUrl: 'https://example.invalid',
-        rpcWsUrl: null,
-        port: 8000,
-        chainId: 1,
-        logLevel: 'silent',
-        cacheTtlMs: 5000,
-      },
-      chainSource: chain,
+  it('reflects wsConnected=false when the WS health source reports so', async () => {
+    await close();
+    const result = await buildTestApp({
+      stub: { blockNumber: 19_500_000 },
+      wsHealth: { isWebSocketConnected: () => false },
     });
-    await app.ready();
+    app = result.app;
+    close = () => app.close();
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/health' });
     expect(res.json().wsConnected).toBe(false);
   });
 
   it('returns blockNumber=0 (degraded) when the provider throws', async () => {
-    await app.close();
-    chain = makeChainSource({
-      getBlockNumber: vi.fn(async () => {
-        throw new Error('network down');
-      }),
+    await close();
+    const result = await buildTestApp({
+      wsHealth: { isWebSocketConnected: () => false },
     });
-    app = await buildServer({
-      config: {
-        rpcUrl: 'https://example.invalid',
-        rpcWsUrl: null,
-        port: 8000,
-        chainId: 1,
-        logLevel: 'silent',
-        cacheTtlMs: 5000,
-      },
-      chainSource: chain,
-    });
-    await app.ready();
+    result.stub.mocks.getBlockNumber.mockRejectedValueOnce(new Error('network down'));
+    app = result.app;
+    close = () => app.close();
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/health' });
     expect(res.statusCode).toBe(200);
     expect(res.json().blockNumber).toBe(0);
   });
 
-  it('uses expectedChainId from the config', async () => {
-    await app.close();
-    chain = makeChainSource();
-    app = await buildServer({
-      config: {
-        rpcUrl: 'https://example.invalid',
-        rpcWsUrl: null,
-        port: 8000,
-        chainId: 11155111, // sepolia
-        logLevel: 'silent',
-        cacheTtlMs: 5000,
-      },
-      chainSource: chain,
+  it('uses expectedChainId from the buildServer config', async () => {
+    await close();
+    const result = await buildTestApp({
+      chainId: 11155111, // sepolia
     });
-    await app.ready();
+    app = result.app;
+    close = () => app.close();
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/health' });
     expect(res.json().chain).toBe('sepolia');
   });
 
+  it('falls back to chain-<id> for unknown chain ids', async () => {
+    await close();
+    const result = await buildTestApp({ chainId: 999_999 });
+    app = result.app;
+    close = () => app.close();
+
+    const res = await app.inject({ method: 'GET', url: '/api/v1/health' });
+    expect(res.json().chain).toBe('chain:999999');
+  });
+
   afterEach(async () => {
-    await app.close();
+    await close();
   });
 });
 
@@ -136,17 +105,8 @@ describe('404 handler', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
-    app = await buildServer({
-      config: {
-        rpcUrl: 'https://example.invalid',
-        rpcWsUrl: null,
-        port: 8000,
-        chainId: 1,
-        logLevel: 'silent',
-        cacheTtlMs: 5000,
-      },
-    });
-    await app.ready();
+    const result = await buildTestApp();
+    app = result.app;
   });
 
   it('returns 404 with error envelope for unknown routes', async () => {

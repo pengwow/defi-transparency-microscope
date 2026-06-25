@@ -1,16 +1,18 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 
-/**
- * Source of chain liveness data for the health endpoint.
- *
- * Implemented in M2 by `chain/provider.ts`. For M1 we accept a thin
- * interface so tests can inject a deterministic stub.
- */
-export interface ChainHealthSource {
-  getBlockNumber(): Promise<number>;
-  isWebSocketConnected(): boolean;
+interface HealthRouteOptions {
+  /** Chain id this server is expected to be talking to. */
+  expectedChainId: number;
 }
 
+/**
+ * `GET /api/v1/health` — basic liveness payload.
+ *
+ * Reads the chain head block number and the current WebSocket health
+ * state. The chain source is obtained from the Fastify decoration
+ * installed in `server.ts`; the `expectedChainId` is a route option so
+ * the server start path can pass it in from the Config.
+ */
 export function defaultChainName(chainId: number): string {
   const CHAIN_NAMES: Record<number, string> = {
     1: 'mainnet',
@@ -24,21 +26,17 @@ export function defaultChainName(chainId: number): string {
   return CHAIN_NAMES[chainId] ?? `chain:${chainId}`;
 }
 
-interface HealthRouteOptions {
-  chain: ChainHealthSource;
-  expectedChainId: number;
-}
-
 const healthRoute: FastifyPluginAsync<HealthRouteOptions> = async (
   fastify: FastifyInstance,
   opts,
 ) => {
-  const { chain, expectedChainId } = opts;
+  const { expectedChainId } = opts;
+  const { provider, wsHealth } = fastify;
 
-  fastify.get('/api/v1/health', async (_request, reply) => {
+  fastify.get('/health', async (_request, reply) => {
     let blockNumber = 0;
     try {
-      blockNumber = await chain.getBlockNumber();
+      blockNumber = await provider.getBlockNumber();
     } catch {
       // Surface 0 so the client still gets a payload and the frontend can
       // render a degraded state. The 5xx path is reserved for genuine
@@ -50,7 +48,7 @@ const healthRoute: FastifyPluginAsync<HealthRouteOptions> = async (
       status: 'ok',
       chain: defaultChainName(expectedChainId),
       blockNumber,
-      wsConnected: chain.isWebSocketConnected(),
+      wsConnected: wsHealth.isWebSocketConnected(),
     });
   });
 };
