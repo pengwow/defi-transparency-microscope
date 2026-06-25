@@ -3,6 +3,7 @@
 
 import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 
 // Unmount any React components rendered by `@testing-library/react` between
 // tests so state never bleeds across cases.

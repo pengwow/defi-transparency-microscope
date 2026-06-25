@@ -1,0 +1,280 @@
+/**
+ * Styles for the common UI components.
+ *
+ * These are intentionally lightweight — colors and spacing come from
+ * the design tokens, and the layout is plain flex/grid.
+ */
+
+@import './variables.css';
+
+/* ErrorBoundary fallback. */
+.dtm-error-boundary {
+  padding: var(--space-6);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dtm-error-boundary h2 {
+  margin: 0 0 var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--font-size-lg);
+}
+
+/* LoadingScreen. */
+.dtm-loading-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.dtm-loading-card {
+  text-align: center;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  min-width: 240px;
+  box-shadow: var(--shadow-md);
+}
+
+.dtm-loading-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-2xl);
+  letter-spacing: 0.08em;
+}
+
+.dtm-loading-message {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.dtm-loading-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.dtm-loading-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 240ms ease-out;
+}
+
+/* RealtimeClock. */
+.dtm-realtime-clock {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+/* Panel. */
+.dtm-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.dtm-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.dtm-panel-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.dtm-panel-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dtm-panel-body {
+  padding: var(--space-4);
+}
+
+/* Header. */
+.dtm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dtm-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dtm-header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dtm-header-logo-mark {
+  color: var(--color-accent);
+  font-size: var(--font-size-xl);
+}
+
+.dtm-header-subtitle {
+  font-size: var(--font-size-sm);
+}
+
+.dtm-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ModeBar. */
+.dtm-mode-bar {
+  display: inline-flex;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+}
+
+.dtm-mode-option {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  transition: background 120ms ease;
+}
+
+.dtm-mode-option.is-active {
+  background: var(--color-accent);
+  color: white;
+}
+
+.dtm-mode-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* NavTabs. */
+.dtm-nav-tabs {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-4);
+}
+
+.dtm-nav-tab {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.dtm-nav-tab:hover {
+  color: var(--color-text);
+}
+
+.dtm-nav-tab.is-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+
+/* LensTransition. */
+.dtm-lens-transition {
+  position: relative;
+  display: contents;
+}
+
+.dtm-lens-transition[data-pulse]:not([data-pulse='0'])::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--color-accent-soft);
+  pointer-events: none;
+  animation: fadeIn 120ms ease-out, fadeOut 240ms ease-in 120ms forwards;
+  z-index: var(--z-overlay);
+}
+
+/* FlashAlert. */
+.dtm-flash-alert {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-toast);
+  animation: slideInRight 240ms ease-out;
+}
+
+.dtm-flash-info {
+  border-left: 3px solid var(--color-info);
+}
+.dtm-flash-warn {
+  border-left: 3px solid var(--color-warn);
+}
+.dtm-flash-error {
+  border-left: 3px solid var(--color-danger);
+}
+
+.dtm-flash-dismiss {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+.dtm-flash-dismiss:hover {
+  color: var(--color-text);
+}
+
+/* ExplainBox. */
+.dtm-explain-box {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.dtm-explain-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.dtm-explain-icon {
+  color: var(--color-accent);
+}
+
+.dtm-explain-body {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
