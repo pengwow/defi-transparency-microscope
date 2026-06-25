@@ -474,6 +474,11 @@
   animation: dtm-pdot 1.5s ease-in-out infinite;
 }
 
+.dtm-mode-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* ----- LoadingScreen (demo) ----- */
 .dtm-loading-screen {
   position: fixed;

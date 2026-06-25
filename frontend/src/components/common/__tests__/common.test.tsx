@@ -102,8 +102,8 @@ describe('Header', () => {
 describe('ModeBar', () => {
   it('marks the active mode with aria-selected', () => {
     render(<ModeBar value="live" onChange={() => undefined} />);
-    const live = screen.getByRole('radio', { name: 'Live' });
-    const replay = screen.getByRole('radio', { name: 'Replay' });
+    const live = screen.getByRole('radio', { name: /实时采样/ });
+    const replay = screen.getByRole('radio', { name: /实验切片/ });
     expect(live.getAttribute('aria-selected')).toBe('true');
     expect(replay.getAttribute('aria-selected')).toBe('false');
   });
@@ -111,7 +111,7 @@ describe('ModeBar', () => {
   it('invokes onChange when another option is clicked', () => {
     const cb = vi.fn();
     render(<ModeBar value="live" onChange={cb} />);
-    fireEvent.click(screen.getByRole('radio', { name: 'Replay' }));
+    fireEvent.click(screen.getByRole('radio', { name: /实验切片/ }));
     expect(cb).toHaveBeenCalledWith('replay');
   });
 });
