@@ -8,8 +8,10 @@
  *
  * On a 2500ms interval the component generates a new transaction
  * with `makeTransaction` and pushes it onto the live store.  When
- * the new transaction is an attack type, there's a 30% chance the
- * component surfaces a `pushFlashAlert` to the UI store.
+ * the new transaction is an attack type (sandwich / jit), there's a
+ * 30% chance the component surfaces a `pushFlashAlert` to the UI
+ * store — unless the demo is currently running (we don't want to
+ * spam the user with attack alerts mid-tour).
  */
 
 import { useEffect, useRef } from 'react';
@@ -19,8 +21,11 @@ import { makeTransaction, TX_TYPE_META, type TxType } from '@/services/demoData'
 import { addExplosion } from '@/canvas/MempoolExplosion';
 
 const POLL_MS = 2500;
-const ATTACK_PROBABILITY = 0.3;
-const ATTACK_TYPES: TxType[] = ['sandwich', 'jit', 'liquidation', 'arbitrage'];
+/** Tx types that produce a FlashAlert.  Narrower than the visual
+ *  attack-type palette — liquidation / arbitrage don't trigger
+ *  the on-screen "sampled an attack" alert. */
+const FLASH_TYPES: TxType[] = ['sandwich', 'jit'];
+const FLASH_PROBABILITY = 0.3; // Math.random() > 0.7
 
 function truncateHash(hash: string): string {
   return hash.slice(0, 14) + '...' + hash.slice(-6);
@@ -77,14 +82,17 @@ export function MempoolLanes({ onEnterMicroscope }: MempoolLanesProps) {
         gasPrice: tx.gasPrice,
       };
       pushTx(entry);
-      // Attack type + 30% chance → surface a flash alert + explosion.
+      // FlashAlert gate: only sandwich / jit, ~30% chance, and not
+      // while the demo tour is in flight.
       if (
-        ATTACK_TYPES.includes(tx.mevType) &&
-        Math.random() < ATTACK_PROBABILITY
+        FLASH_TYPES.includes(tx.mevType) &&
+        !useUiStore.getState().demoRunning &&
+        Math.random() > 1 - FLASH_PROBABILITY
       ) {
+        const isSandwich = tx.mevType === 'sandwich';
         pushFlashAlert({
-          type: tx.mevType === 'arbitrage' ? 'sandwich' : (tx.mevType as 'sandwich' | 'jit' | 'liquidation'),
-          title: `${TX_TYPE_META[tx.mevType].label} 策略检测`,
+          type: isSandwich ? 'sandwich' : 'jit',
+          title: isSandwich ? '🚨 采样到三明治！' : '🎯 检测到 JIT 注入',
           body: `${truncateHash(tx.hash)} · ${TX_TYPE_META[tx.mevType].desc}`,
         });
         addExplosion(80, 80, TX_TYPE_META[tx.mevType].color);

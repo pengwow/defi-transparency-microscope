@@ -90,4 +90,46 @@ describe('MempoolLanes', () => {
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
   });
+
+  it('uses the sandwich flash template for sandwich txs', () => {
+    const spy = vi.spyOn(useUiStore.getState(), 'pushFlashAlert');
+    vi.useFakeTimers();
+    render(<MempoolLanes onEnterMicroscope={() => undefined} />);
+    for (let i = 0; i < 50; i++) vi.advanceTimersByTime(2500);
+    const sandwichCalls = spy.mock.calls.filter(
+      ([p]) => (p as { type: string }).type === 'sandwich',
+    );
+    expect(sandwichCalls.length).toBeGreaterThan(0);
+    // Every sandwich flash must use the new specific template.
+    for (const [payload] of sandwichCalls) {
+      expect((payload as { title: string }).title).toBe('🚨 采样到三明治！');
+    }
+    spy.mockRestore();
+  });
+
+  it('uses the JIT flash template for JIT txs', () => {
+    const spy = vi.spyOn(useUiStore.getState(), 'pushFlashAlert');
+    vi.useFakeTimers();
+    render(<MempoolLanes onEnterMicroscope={() => undefined} />);
+    for (let i = 0; i < 50; i++) vi.advanceTimersByTime(2500);
+    const jitCalls = spy.mock.calls.filter(
+      ([p]) => (p as { type: string }).type === 'jit',
+    );
+    expect(jitCalls.length).toBeGreaterThan(0);
+    for (const [payload] of jitCalls) {
+      expect((payload as { title: string }).title).toBe('🎯 检测到 JIT 注入');
+    }
+    spy.mockRestore();
+  });
+
+  it('does not trigger flash alerts while the demo is running', () => {
+    useUiStore.getState().startDemo();
+    const spy = vi.spyOn(useUiStore.getState(), 'pushFlashAlert');
+    vi.useFakeTimers();
+    render(<MempoolLanes onEnterMicroscope={() => undefined} />);
+    for (let i = 0; i < 50; i++) vi.advanceTimersByTime(2500);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    useUiStore.getState().stopDemo();
+  });
 });
