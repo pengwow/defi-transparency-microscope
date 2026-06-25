@@ -68,7 +68,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByTestId('app-header')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('tab', { name: 'Mempool' }));
+    fireEvent.click(screen.getByRole('tab', { name: /实时采样/ }));
     await waitFor(() => {
       expect(screen.getByTestId('amm-curve-panel')).toBeInTheDocument();
     });

@@ -25,7 +25,7 @@ export { ModeBar } from './ModeBar';
 export type { ModeBarProps } from './ModeBar';
 
 export { NavTabs, NAV_TABS } from './NavTabs';
-export type { NavTabsProps, NavTab } from './NavTabs';
+export type { NavTabsProps, NavTab, NavTabId } from './NavTabs';
 
 export { LensTransition } from './LensTransition';
 export type { LensTransitionProps } from './LensTransition';

@@ -118,25 +118,26 @@ describe('ModeBar', () => {
 
 describe('NavTabs', () => {
   it('renders six tabs with the active one selected', () => {
-    render(<NavTabs active="dashboard" onSelect={() => undefined} />);
+    render(<NavTabs active="live" onSelect={() => undefined} />);
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(6);
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].textContent).toBe('📡 实时采样');
   });
 
   it('invokes onSelect when a tab is clicked', () => {
     const cb = vi.fn();
-    render(<NavTabs active="dashboard" onSelect={cb} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Positions' }));
-    expect(cb).toHaveBeenCalledWith('positions');
+    render(<NavTabs active="report" onSelect={cb} />);
+    fireEvent.click(screen.getByRole('tab', { name: /LP\/IL/ }));
+    expect(cb).toHaveBeenCalledWith('lpil');
   });
 
   it('handles arrow key navigation', () => {
     const cb = vi.fn();
-    render(<NavTabs active="dashboard" onSelect={cb} />);
+    render(<NavTabs active="live" onSelect={cb} />);
     const tablist = screen.getByRole('tablist');
     fireEvent.keyDown(tablist, { key: 'ArrowRight' });
-    expect(cb).toHaveBeenCalledWith('mempool');
+    expect(cb).toHaveBeenCalledWith('fork');
   });
 });
 

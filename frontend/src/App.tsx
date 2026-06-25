@@ -35,6 +35,7 @@ import { LiquidationPage } from '@/pages/LiquidationPage';
 import { LpIlPage } from '@/pages/LpIlPage';
 import { LiveSamplingPage } from '@/pages/LiveSamplingPage';
 import { ReportPage } from '@/pages/ReportPage';
+import type { NavTabId } from '@/components/common';
 
 const api = new MockAPI();
 
@@ -48,6 +49,30 @@ const PAGES: Record<Page, () => JSX.Element> = {
   experiments: ForkExperimentPage,
   settings: ReportPage, // unmapped — fall back to the report.
 };
+
+/**
+ * Bridge: translate the demo tab IDs (live / fork / …) into the
+ * historical Page enum used by `uiStore`.  The Page enum is
+ * scheduled to be renamed in a later batch; for now we just map.
+ */
+function tabIdToPage(id: NavTabId): Page {
+  switch (id) {
+    case 'live':
+      return 'mempool';
+    case 'fork':
+      return 'experiments';
+    case 'liquidation':
+      return 'lending';
+    case 'lpil':
+      return 'positions';
+    case 'edu':
+      return 'transactions';
+    case 'report':
+      return 'dashboard';
+    default:
+      return id;
+  }
+}
 
 export function App() {
   const page = useUiStore((s) => s.page);
@@ -119,7 +144,7 @@ export function App() {
               </>
             }
           />
-          <NavTabs active={page} onSelect={setPage} />
+          <NavTabs active={page} onSelect={(id) => setPage(tabIdToPage(id))} />
           <main className="dtm-app-main" data-testid="app-main">
             <CurrentPage />
           </main>

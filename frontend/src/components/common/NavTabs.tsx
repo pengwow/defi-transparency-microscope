@@ -5,28 +5,42 @@
  *   - container: role="tablist"
  *   - each item: role="tab" with aria-selected
  *   - keyboard navigation: ←/→/Home/End
+ *
+ * The tab IDs are the canonical DTM_Demo names: `live`, `fork`,
+ * `liquidation`, `lpil`, `edu`, `report`.  The Page enum in
+ * `uiStore` still uses its historical IDs (dashboard / mempool /
+ * …) so consumers bridge the two with a small mapping function.
  */
 
 import type { KeyboardEvent } from 'react';
 import type { Page } from '@/store/uiStore';
 
+export type NavTabId =
+  | 'live'
+  | 'fork'
+  | 'liquidation'
+  | 'lpil'
+  | 'edu'
+  | 'report'
+  | Page;
+
 export interface NavTab {
-  id: Page;
+  id: NavTabId;
   label: string;
 }
 
 export const NAV_TABS: ReadonlyArray<NavTab> = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'mempool', label: 'Mempool' },
-  { id: 'transactions', label: 'Transactions' },
-  { id: 'lending', label: 'Lending' },
-  { id: 'positions', label: 'Positions' },
-  { id: 'experiments', label: 'Experiments' },
+  { id: 'live', label: '📡 实时采样' },
+  { id: 'fork', label: '🔬 实验切片' },
+  { id: 'liquidation', label: '⚡ 清算' },
+  { id: 'lpil', label: '🌊 LP/IL' },
+  { id: 'edu', label: '🎓 教学实验' },
+  { id: 'report', label: '📊 报告' },
 ];
 
 export interface NavTabsProps {
-  active: Page;
-  onSelect: (p: Page) => void;
+  active: NavTabId;
+  onSelect: (id: NavTabId) => void;
 }
 
 export function NavTabs({ active, onSelect }: NavTabsProps) {
