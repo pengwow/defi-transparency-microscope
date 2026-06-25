@@ -16,7 +16,7 @@ import type { V2Position, V3Position } from '@/types';
 const HEIGHT = 260;
 
 /** Build a synthetic V2 position for the ILCurve renderer. */
-function buildV2Position(ratio: number): V2Position {
+function buildV2Position(_ratio: number): V2Position {
   return {
     id: 'lp-v2-synth',
     owner: '0xsynth',
@@ -31,7 +31,7 @@ function buildV2Position(ratio: number): V2Position {
 }
 
 /** Build a synthetic V3 position with a ±50% range around the current ratio. */
-function buildV3Position(ratio: number): V3Position {
+function buildV3Position(_ratio: number): V3Position {
   const tickLower = -887272; // -50% in sqrt(1.0001)
   const tickUpper = 887272;  // +50% in sqrt(1.0001)
   return {

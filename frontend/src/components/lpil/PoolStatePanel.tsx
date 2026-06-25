@@ -31,9 +31,8 @@ export function PoolStatePanel({ testId = 'pool-state-panel' }: PoolStatePanelPr
   const rows = useMemo(() => {
     const initialEth = INITIAL_DEPTH_USD / INITIAL_PRICE / 2; // half the depth in ETH
     const initialUsdc = INITIAL_DEPTH_USD / 2; // half in USDC
-    // k = x * y
-    const k = initialEth * initialUsdc;
-    // The LP adds a slice proportional to its deposit.
+    // The LP adds a slice proportional to its deposit; reserves are
+    // derived from the constant-product invariant x·y = k.
     const slice = depositUsd / INITIAL_DEPTH_USD;
     const userEth = initialEth * slice * Math.sqrt(priceRatio);
     const userUsdc = (initialUsdc * slice) / Math.sqrt(priceRatio);
