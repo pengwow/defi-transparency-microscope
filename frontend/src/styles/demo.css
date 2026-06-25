@@ -797,3 +797,243 @@
   .dtm-panel-header::after { display: block; }
   .dtm-panel.is-collapsed .dtm-panel-body { display: none; }
 }
+
+/* ===== PANEL RIGHT SLOT (new) ===== */
+.dtm-panel-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ===== EXPLAIN BOX (new) ===== */
+.dtm-explain-box.is-warning::before {
+  background: linear-gradient(90deg, var(--dtm-amber) 0%, transparent 100%);
+}
+.dtm-explain-box.is-danger::before {
+  background: linear-gradient(90deg, var(--dtm-coral) 0%, transparent 100%);
+}
+.dtm-explain-box-title {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--dtm-cyan);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.dtm-explain-box.is-warning .dtm-explain-box-title { color: var(--dtm-amber); }
+.dtm-explain-box.is-danger .dtm-explain-box-title { color: var(--dtm-coral); }
+.dtm-explain-box-body { display: block; }
+
+/* ===== METRIC BOX (new) ===== */
+.dtm-metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(0, 229, 255, 0.04);
+  border: 1px solid var(--dtm-rule);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+.dtm-metric-box:hover { border-color: rgba(0, 229, 255, 0.18); }
+.dtm-metric-box-label {
+  font-size: 0.7rem;
+  color: var(--dtm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.dtm-metric-box-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--dtm-ink);
+}
+.dtm-metric-box-trend {
+  font-size: 0.75rem;
+  color: var(--dtm-muted);
+}
+.dtm-metric-box.is-up { border-color: rgba(105, 240, 174, 0.4); }
+.dtm-metric-box.is-up .dtm-metric-box-trend { color: var(--dtm-lime); }
+.dtm-metric-box.is-down { border-color: rgba(255, 94, 94, 0.4); }
+.dtm-metric-box.is-down .dtm-metric-box-trend { color: var(--dtm-coral); }
+.dtm-metric-box.is-flat .dtm-metric-box-trend { color: var(--dtm-cyan); }
+
+/* ===== METRIC GRID (new) ===== */
+.dtm-metric-grid {
+  display: grid;
+  gap: 0.6rem;
+  width: 100%;
+}
+.dtm-metric-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.dtm-metric-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.dtm-metric-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 768px) {
+  .dtm-metric-grid.cols-3,
+  .dtm-metric-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .dtm-metric-grid.cols-2,
+  .dtm-metric-grid.cols-3,
+  .dtm-metric-grid.cols-4 { grid-template-columns: 1fr; }
+}
+
+/* ===== RISK GAUGE (new) ===== */
+.dtm-risk-gauge {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: inline-block;
+}
+.dtm-risk-gauge-ring {
+  width: 100%;
+  height: 100%;
+}
+.dtm-risk-gauge-track { stroke: var(--dtm-rule); }
+.dtm-risk-gauge-progress { transition: stroke-dasharray 0.4s; }
+.dtm-risk-gauge.is-low .dtm-risk-gauge-progress { stroke: var(--dtm-lime); }
+.dtm-risk-gauge.is-medium .dtm-risk-gauge-progress { stroke: var(--dtm-cyan); }
+.dtm-risk-gauge.is-high .dtm-risk-gauge-progress { stroke: var(--dtm-coral); }
+.dtm-risk-gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.dtm-risk-gauge-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.dtm-risk-gauge-label {
+  font-size: 0.7rem;
+  color: var(--dtm-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ===== EXPERIMENT CARD (new) ===== */
+.dtm-experiment-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--dtm-bg-surface);
+  border: 1px solid var(--dtm-rule);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.dtm-experiment-card:hover {
+  border-color: rgba(0, 229, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.08);
+}
+.dtm-experiment-card.is-active {
+  border-color: var(--dtm-cyan);
+  box-shadow: 0 0 0 1px var(--dtm-cyan), 0 0 18px rgba(0, 229, 255, 0.18);
+}
+.dtm-experiment-card-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.dtm-experiment-card-body { flex: 1; }
+.dtm-experiment-card-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.15rem;
+}
+.dtm-experiment-card-desc {
+  font-size: 0.78rem;
+  color: var(--dtm-muted);
+}
+
+/* ===== STEP BUTTON (new) ===== */
+.dtm-step-button {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  background: rgba(0, 229, 255, 0.04);
+  border: 1px solid var(--dtm-rule);
+  border-radius: 999px;
+}
+.dtm-step-button-pill {
+  padding: 0.35rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--dtm-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.dtm-step-button-pill:hover { color: var(--dtm-ink); }
+.dtm-step-button-pill.is-active {
+  background: var(--dtm-cyan);
+  color: #001017;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+}
+
+/* ===== FORM LABEL / FORM GROUP (new) ===== */
+.dtm-form-group { margin-bottom: 0.7rem; }
+.dtm-form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--dtm-muted);
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dtm-form-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--dtm-ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dtm-param-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 22px;
+  cursor: pointer;
+}
+.dtm-param-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--dtm-rule);
+  border-radius: 2px;
+}
+.dtm-param-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--dtm-cyan);
+  border: 2px solid #001017;
+  border-radius: 50%;
+  margin-top: -7px;
+  box-shadow: 0 0 6px var(--dtm-cyan);
+}
+.dtm-param-slider::-moz-range-track {
+  height: 3px;
+  background: var(--dtm-rule);
+  border-radius: 2px;
+}
+.dtm-param-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--dtm-cyan);
+  border: 2px solid #001017;
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--dtm-cyan);
+}
