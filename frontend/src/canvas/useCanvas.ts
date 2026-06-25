@@ -58,6 +58,20 @@ export function useCanvas(drawFn: DrawFn, deps: ReadonlyArray<unknown>): UseCanv
       return { width: cssWidth, height: cssHeight };
     };
 
+    // Respect prefers-reduced-motion: skip the rAF loop entirely so
+    // users with motion sensitivity see a single static frame.
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      const size = resize();
+      drawRef.current(ctx, size);
+      return () => {
+        stopped = true;
+      };
+    }
+
     const frame = () => {
       if (stopped) return;
       const size = resize();

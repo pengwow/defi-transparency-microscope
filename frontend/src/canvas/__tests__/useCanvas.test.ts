@@ -147,4 +147,25 @@ describe('useCanvas', () => {
     expect(handle.canvas.height).toBe(150 * 2);
     handle.unmount();
   });
+
+  it('does not start the rAF loop when prefers-reduced-motion is reduce', () => {
+    setupCanvasEnv();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+    const rafSpy = globalThis.requestAnimationFrame as unknown as ReturnType<typeof vi.fn>;
+    rafSpy.mockClear();
+    const handle = mountProbe();
+    expect(rafSpy).not.toHaveBeenCalled();
+    handle.unmount();
+    window.matchMedia = originalMatchMedia;
+  });
 });
