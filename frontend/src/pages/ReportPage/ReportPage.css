@@ -1,20 +1,49 @@
-/* ReportPage layout — three columns. */
+/* ReportPage layout — top overview + 3 columns + bottom trace. */
+
+.dtm-report-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dtm-report-page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--dtm-cyan);
+  border-bottom: 1px solid var(--dtm-rule);
+  padding-bottom: var(--space-2);
+}
 
 .dtm-report-grid {
   display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr;
+  grid-template-columns: 1fr 1.2fr 1fr;
   gap: var(--space-4);
   align-items: start;
 }
 
-@media (max-width: 1024px) {
-  .dtm-report-grid {
+.dtm-report-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.dtm-report-bottom {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .dtm-report-grid,
+  .dtm-report-bottom {
     grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 720px) {
-  .dtm-report-grid {
+  .dtm-report-grid,
+  .dtm-report-bottom {
     grid-template-columns: 1fr;
   }
 }
