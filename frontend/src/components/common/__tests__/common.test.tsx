@@ -90,7 +90,7 @@ describe('Header', () => {
   it('renders the brand mark', () => {
     render(<Header />);
     expect(screen.getByTestId('app-header')).toBeInTheDocument();
-    expect(screen.getByText('DTM')).toBeInTheDocument();
+    expect(screen.getByText('DeFi')).toBeInTheDocument();
   });
 
   it('renders the right slot when provided', () => {
@@ -210,5 +210,24 @@ describe('RealtimeClock time advancement', () => {
     expect(el.textContent).toMatch(/^\d{2}:\d{2}:\d{2}$/);
     expect(initial).toMatch(/^\d{2}:\d{2}:\d{2}$/);
     vi.useRealTimers();
+  });
+});
+
+describe('Header (demo)', () => {
+  it('renders the microscope logo and the Chinese brand', () => {
+    render(<Header />);
+    expect(screen.getByTestId('app-header')).toBeInTheDocument();
+    // Microscope emoji in the logo tile.
+    expect(screen.getByLabelText('DeFi 透明显微镜 logo')).toHaveTextContent('🔬');
+    // Two-part brand: "DeFi" (dim) + "透明显微镜" (cyan span).
+    expect(screen.getByText('DeFi')).toBeInTheDocument();
+    expect(screen.getByText('透明显微镜')).toBeInTheDocument();
+  });
+
+  it('triggers onStartDemo when the "一键实验" button is clicked', () => {
+    const cb = vi.fn();
+    render(<Header onStartDemo={cb} />);
+    fireEvent.click(screen.getByRole('button', { name: /一键实验/ }));
+    expect(cb).toHaveBeenCalledTimes(1);
   });
 });

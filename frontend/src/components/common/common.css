@@ -278,3 +278,261 @@
   font-size: var(--font-size-sm);
   line-height: 1.5;
 }
+
+/* ============================================================
+ * Batch 2 — DTM_Demo port (Phase 1.5–1.8)
+ *
+ * Styles for the rewritten Header / NavTabs / ModeBar / LoadingScreen.
+ * All classes use the .dtm- prefix.  Existing rules above are kept
+ * untouched so older code paths remain green during the transition.
+ * ============================================================ */
+
+/* ----- Header (demo) ----- */
+.dtm-header {
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0.95), transparent);
+  border-bottom: 1px solid var(--dtm-rule);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dtm-header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--dtm-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dtm-header-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--dtm-cyan), var(--dtm-purple));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
+  animation: dtm-logoPulse 3s ease-in-out infinite;
+}
+
+.dtm-header-logo-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.dtm-header-logo-text-dim {
+  color: var(--dtm-ink);
+}
+
+.dtm-header-logo-text-bright {
+  color: var(--dtm-cyan);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+.dtm-header-demo-btn {
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 94, 94, 0.15), rgba(255, 171, 64, 0.1));
+  border: 1px solid rgba(255, 94, 94, 0.3);
+  color: var(--dtm-coral);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: var(--dtm-font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  animation: dtm-demoPulse 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.dtm-header-demo-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(255, 94, 94, 0.3);
+}
+
+.dtm-header-demo-btn.is-playing {
+  background: linear-gradient(135deg, rgba(105, 240, 174, 0.15), rgba(0, 229, 255, 0.1));
+  border-color: rgba(105, 240, 174, 0.3);
+  color: var(--dtm-lime);
+  animation: none;
+}
+
+/* ----- NavTabs (demo) ----- */
+.dtm-nav-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--dtm-bg-surface);
+  border: 1px solid var(--dtm-rule);
+  border-radius: 9px;
+  padding: 0.2rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--dtm-rule);
+}
+
+.dtm-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dtm-nav-tab {
+  padding: 0.45rem 0.85rem;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--dtm-muted);
+  cursor: pointer;
+  transition: all 0.25s;
+  border: none;
+  background: transparent;
+  font-family: var(--dtm-font-sans);
+  white-space: nowrap;
+}
+
+.dtm-nav-tab:hover {
+  color: var(--dtm-sub);
+  background: var(--dtm-bg-hover);
+}
+
+.dtm-nav-tab.is-active {
+  color: var(--dtm-bg-deep);
+  background: linear-gradient(135deg, var(--dtm-cyan), var(--dtm-purple));
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(0, 229, 255, 0.18);
+}
+
+/* ----- ModeBar (demo) ----- */
+.dtm-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  background: var(--dtm-bg-mid);
+  border-bottom: 1px solid var(--dtm-rule);
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.dtm-mode-option {
+  padding: 0.5rem 1.2rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid var(--dtm-rule);
+  background: var(--dtm-bg-surface);
+  color: var(--dtm-sub);
+  font-family: var(--dtm-font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: center;
+  max-width: 400px;
+}
+
+.dtm-mode-option:hover {
+  border-color: var(--dtm-glow);
+}
+
+.dtm-mode-option.is-active {
+  border-color: var(--dtm-cyan);
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--dtm-cyan);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+}
+
+.dtm-mode-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dtm-mode-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dtm-muted);
+  display: inline-block;
+}
+
+.dtm-mode-option.is-active .dtm-mode-indicator {
+  background: var(--dtm-lime);
+  box-shadow: 0 0 8px var(--dtm-lime);
+  animation: dtm-pdot 1.5s ease-in-out infinite;
+}
+
+/* ----- LoadingScreen (demo) ----- */
+.dtm-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--dtm-bg-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 1s ease-out;
+}
+
+.dtm-loading-screen.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dtm-loading-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--dtm-cyan), var(--dtm-purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  box-shadow: 0 0 60px rgba(0, 229, 255, 0.3);
+  animation: dtm-loadingPulse 2s ease-in-out infinite;
+  margin-bottom: 2rem;
+}
+
+.dtm-loading-title {
+  font-family: var(--dtm-font-display);
+  font-size: 1.8rem;
+  color: var(--dtm-cyan);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+  margin: 0 0 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dtm-loading-subtitle {
+  color: var(--dtm-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem;
+}
+
+.dtm-loading-bar {
+  width: 200px;
+  height: 3px;
+  background: var(--dtm-bg-card);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.dtm-loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--dtm-cyan), var(--dtm-purple));
+  width: 0%;
+  animation: dtm-loadProgress 2s ease-out forwards;
+}
