@@ -53,4 +53,35 @@ describe('store/uiStore', () => {
     useUiStore.getState().setLoading(false);
     expect(useUiStore.getState().loading).toBe(false);
   });
+
+  it('startDemo sets demoRunning true and resets demoStep to 0', () => {
+    useUiStore.getState().startDemo();
+    const s = useUiStore.getState();
+    expect(s.demoRunning).toBe(true);
+    expect(s.demoStep).toBe(0);
+  });
+
+  it('pushFlashAlert stores the payload and dismissFlashAlert clears it', () => {
+    useUiStore.getState().pushFlashAlert({
+      type: 'sandwich',
+      title: '三明治攻击',
+      body: '检测到夹子交易',
+    });
+    const a = useUiStore.getState().flashAlert;
+    expect(a).not.toBeNull();
+    expect(a?.type).toBe('sandwich');
+    expect(a?.title).toBe('三明治攻击');
+    useUiStore.getState().dismissFlashAlert();
+    expect(useUiStore.getState().flashAlert).toBeNull();
+  });
+
+  it('stopDemo clears demoRunning, demoStep, and flashAlert', () => {
+    useUiStore.getState().startDemo();
+    useUiStore.getState().pushFlashAlert({ type: 'jit', title: 'x', body: 'y' });
+    useUiStore.getState().stopDemo();
+    const s = useUiStore.getState();
+    expect(s.demoRunning).toBe(false);
+    expect(s.demoStep).toBe(0);
+    expect(s.flashAlert).toBeNull();
+  });
 });
