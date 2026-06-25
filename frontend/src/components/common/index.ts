@@ -37,3 +37,5 @@ export type { ExplainBoxProps } from './ExplainBox';
 
 export { ParticleBackground } from './ParticleBackground';
 export type { ParticleBackgroundProps } from './ParticleBackground';
+
+export { DemoOverlay } from './DemoOverlay';

@@ -881,3 +881,81 @@
   letter-spacing: 0.06em;
   margin-top: 0.4rem;
 }
+
+/* ============================================================
+ * Batch 11 (Phase 9) — DemoOverlay
+ *
+ * Bottom-center floating progress widget shown while a
+ * `runDemo` script is in flight.  See DemoOverlay.tsx.
+ * ============================================================ */
+
+.dtm-demo-overlay {
+  position: fixed;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(6, 10, 20, 0.78);
+  border: 1px solid var(--dtm-rule);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 400;
+  max-width: 90vw;
+  animation: dtm-demoOverlayIn 0.3s ease-out;
+}
+
+@keyframes dtm-demoOverlayIn {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.dtm-demo-progress {
+  width: 200px;
+  height: 4px;
+  background: var(--dtm-bg-card);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.dtm-demo-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--dtm-cyan), var(--dtm-purple));
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.dtm-demo-text {
+  font-family: var(--dtm-font-mono);
+  font-size: 0.75rem;
+  color: var(--dtm-sub);
+  white-space: nowrap;
+}
+
+.dtm-demo-skip {
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: var(--dtm-bg-card);
+  border: 1px solid var(--dtm-lime);
+  color: var(--dtm-lime);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--dtm-font-sans);
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+
+.dtm-demo-skip:hover {
+  background: rgba(105, 240, 174, 0.12);
+  box-shadow: 0 0 12px rgba(105, 240, 174, 0.3);
+}
+
+@media (max-width: 768px) {
+  .dtm-demo-progress { width: 120px; }
+  .dtm-demo-text { font-size: 0.65rem; }
+}

@@ -20,6 +20,7 @@ import {
   LensTransition,
   FlashAlert,
   ExplainBox,
+  DemoOverlay,
 } from '../index';
 import { useUiStore } from '@/store/uiStore';
 
@@ -359,5 +360,56 @@ describe('Header (demo)', () => {
     render(<Header onStartDemo={cb} />);
     fireEvent.click(screen.getByRole('button', { name: /一键实验/ }));
     expect(cb).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DemoOverlay', () => {
+  it('is not rendered when demoRunning is false', () => {
+    render(<DemoOverlay />);
+    expect(screen.queryByTestId('demo-overlay')).toBeNull();
+  });
+
+  it('renders the progress bar and step text when demoRunning is true', () => {
+    useUiStore.getState().startDemo();
+    useUiStore.getState().advanceDemo(); // demoStep = 1
+    render(<DemoOverlay />);
+    expect(screen.getByTestId('demo-overlay')).toBeInTheDocument();
+    // The progress bar fill is present and has a non-zero width.
+    const bar = screen.getByTestId('demo-progress-bar');
+    expect(bar).toBeInTheDocument();
+    expect(bar.style.width).not.toBe('0%');
+    // The step text matches the demoStep mapping (1 → "捕获交易…").
+    expect(screen.getByTestId('demo-step-text')).toHaveTextContent('捕获交易');
+  });
+
+  it('shows the "准备中…" text when demoStep is 0', () => {
+    useUiStore.getState().startDemo(); // demoStep = 0
+    render(<DemoOverlay />);
+    expect(screen.getByTestId('demo-step-text')).toHaveTextContent('准备中');
+    // The progress bar should be empty.
+    expect(screen.getByTestId('demo-progress-bar').style.width).toBe('0%');
+  });
+
+  it('shows the "完成 ✅" text when demoStep is 4', () => {
+    useUiStore.getState().startDemo();
+    for (let i = 0; i < 4; i++) useUiStore.getState().advanceDemo();
+    render(<DemoOverlay />);
+    expect(screen.getByTestId('demo-step-text')).toHaveTextContent('完成');
+  });
+
+  it('shows the "已就绪" text when demoStep is >= 5', () => {
+    useUiStore.getState().startDemo();
+    for (let i = 0; i < 6; i++) useUiStore.getState().advanceDemo();
+    render(<DemoOverlay />);
+    expect(screen.getByTestId('demo-step-text')).toHaveTextContent('已就绪');
+  });
+
+  it('clicking "跳过" calls stopDemo', () => {
+    useUiStore.getState().startDemo();
+    const stopSpy = vi.spyOn(useUiStore.getState(), 'stopDemo');
+    render(<DemoOverlay />);
+    fireEvent.click(screen.getByRole('button', { name: /跳过/ }));
+    expect(stopSpy).toHaveBeenCalledTimes(1);
+    stopSpy.mockRestore();
   });
 });
