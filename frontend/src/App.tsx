@@ -23,6 +23,7 @@ import {
   NavTabs,
   ParticleBackground,
   RealtimeClock,
+  DemoOverlay,
 } from '@/components/common';
 import { useExperimentStore } from '@/store/experimentStore';
 import { useLiveStore } from '@/store/liveStore';
@@ -140,6 +141,7 @@ export function App() {
             <CurrentPage />
           </main>
           <FlashAlert onEnterMicroscope={enterMicroscope} />
+          <DemoOverlay />
         </div>
       </LensTransition>
     </ErrorBoundary>
