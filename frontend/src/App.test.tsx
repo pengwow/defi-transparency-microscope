@@ -59,7 +59,7 @@ describe('App', () => {
   it('lands on the live page by default', async () => {
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByTestId('amm-curve-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('live-amm-panel')).toBeInTheDocument();
     });
   });
 
