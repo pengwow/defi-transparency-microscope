@@ -1,45 +1,71 @@
 /**
  * Global stylesheet.
  *
- * Imports tokens, then sets up resets, base typography, and a few
- * cross-cutting layout helpers.  Component-specific styles live next
- * to the components that use them.
+ * 1) 导入设计 token (`variables.css`) 与 keyframes (`animations.css`)；
+ * 2) 复刻 DTM_Demo.html 的 body reset、body 装饰、扫描线 overlay；
+ * 3) 一些跨组件的 layout 工具类（`.dtm-app` / `.dtm-app-main`）。
+ *
+ * 第三方 CSS 顺序敏感：先 token，再动画，最后 reset，确保覆盖。
  */
 
 @import './variables.css';
 @import './animations.css';
 
+/* ===== Reset（与 DTM_Demo.html 17 行 1:1 对应） ===== */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body,
 #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
+  min-height: 100vh;
 }
 
 html {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-base);
-  line-height: 1.4;
+  background: var(--dtm-bg-deep);
+  color: var(--dtm-ink);
+  font-family: var(--dtm-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  min-height: 100%;
-  background: var(--color-bg);
+  font-family: var(--dtm-font-sans);
+  background: var(--dtm-bg-deep);
+  color: var(--dtm-ink);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ===== Scanline overlay（demo body::after） ===== */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 229, 255, 0.004) 2px,
+    rgba(0, 229, 255, 0.004) 4px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--dtm-cyan);
   text-decoration: none;
 }
 
@@ -60,27 +86,27 @@ button {
 button:focus-visible,
 [role='tab']:focus-visible,
 [role='button']:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--dtm-cyan);
   outline-offset: 2px;
 }
 
 code,
 pre,
 .mono {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
+  font-family: var(--dtm-font-mono);
+  font-size: 0.75rem;
 }
 
 ::selection {
-  background: var(--color-accent-soft);
+  background: var(--dtm-glow);
 }
 
 .muted {
-  color: var(--color-text-muted);
+  color: var(--dtm-sub);
 }
 
 .dim {
-  color: var(--color-text-dim);
+  color: var(--dtm-muted);
 }
 
 /* App shell layout. */
@@ -88,7 +114,7 @@ pre,
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--color-bg);
+  background: var(--dtm-bg-deep);
 }
 
 .dtm-app-main {
