@@ -57,7 +57,6 @@ export function App() {
   const demoRunning = useUiStore((s) => s.demoRunning);
   const setMode = useUiStore((s) => s.setMode);
   const setPage = useUiStore((s) => s.setPage);
-  const dismissFlashAlert = useUiStore((s) => s.dismissFlashAlert);
   const [ready, setReady] = useState(false);
 
   // Initial data load.
@@ -109,9 +108,8 @@ export function App() {
     void runDemo(kind);
   };
 
-  const enterMicroscope = async () => {
-    dismissFlashAlert();
-    await runDemo('microscope');
+  const enterMicroscope = () => {
+    void runDemo('microscope');
   };
 
   // While loading, just render the background (avoid the loading
