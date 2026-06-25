@@ -1,0 +1,70 @@
+/* Styles for the LP PositionList. */
+
+.dtm-lp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.dtm-lp-list-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.dtm-lp-list-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-alt);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.dtm-lp-list-row:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.dtm-lp-list-row[data-active='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.dtm-lp-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.dtm-lp-list-id {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.dtm-lp-list-apr {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.dtm-lp-list-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
