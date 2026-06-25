@@ -30,31 +30,15 @@ import { Glossary, type GlossaryEntry } from './Glossary';
 import './EducationPage.css';
 
 // Legacy modules retained for downstream consumers (iron rule 5).
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _LEGACY_STEPS: ReadonlyArray<TimelineStep> = [
-  { id: '1', title: 'CPMM', summary: 'x*y=k — the constant product invariant' },
-  { id: '2', title: 'Impermanent Loss', summary: 'LP drift vs. HODL baseline' },
-  { id: '3', title: 'Health Factor', summary: 'Lending liquidation risk' },
-  { id: '4', title: 'MEV & Sandwiches', summary: 'Attacker profit extraction' },
-  { id: '5', title: 'PnL Attribution', summary: 'Decomposing swap P&L' },
-  { id: '6', title: 'Reporting', summary: 'Exporting a session as JSON' },
-];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _LEGACY_CARDS: ReadonlyArray<FormulaCard> = [
-  {
-    id: 'cpmm',
-    title: 'CPMM',
-    formula: 'x * y = k',
-    description: 'Constant product invariant.',
-  },
-];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _LEGACY_ENTRIES: ReadonlyArray<GlossaryEntry> = [
-  { term: 'AMM', definition: 'Automated market maker.' },
-];
-// Surface the legacy imports so the bundler keeps the files live
-// in case the page wants to re-introduce them.
+// Reference the imports so the bundler keeps the modules live and
+// TypeScript's `noUnusedLocals` stays happy.
+const _LEGACY_STEPS: ReadonlyArray<TimelineStep> = [];
+const _LEGACY_CARDS: ReadonlyArray<FormulaCard> = [];
+const _LEGACY_ENTRIES: ReadonlyArray<GlossaryEntry> = [];
 const _LEGACY_IMPORTS = { Timeline, CheatSheet, Glossary };
+void _LEGACY_STEPS;
+void _LEGACY_CARDS;
+void _LEGACY_ENTRIES;
 void _LEGACY_IMPORTS;
 
 export function EducationPage() {
