@@ -1,133 +1,117 @@
 /**
- * LiveSamplingPage — the live mempool inspection view.
+ * LiveSamplingPage — the "Live 实时采样" tab.
  *
- * Three columns:
- *   1. AMM Curve  — canvas rendered from `AmmCurve.draw`, redraws on
- *      mempool / price changes via the `useCanvas` hook.
- *   2. Sandwich Feed — clickable list of mempool entries backed by
- *      the full mock transaction (for amounts).
- *   3. Inspector — details of the currently selected transaction,
- *      with a sandwich bundle breakdown when present.
+ * Three-column layout (per DTM_Demo.html page-live):
+ *   - Left:  Mempool 泳道 (MempoolLanes + MevLegend) + MEV 策略归因
+ *   - Center: 实时 AMM 曲线 + 实时损益归因
+ *   - Right: 网络状态 + 最近采样
  *
- * A setInterval pushes a new mempool entry every 1500ms to simulate
- * a live feed.  The pool and the full transaction list are loaded
- * once on mount from the mock API.
+ * Each cell is wrapped in a `Panel`; MempoolLanes exposes an
+ * "🔬 放入显微镜" button that drops the user into the demo's
+ * microscope-loading animation by setting the UI store's lens
+ * stage to `capture`.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExplainBox, Panel } from '@/components/common';
-import { draw as drawAmmCurve } from '@/canvas/AmmCurve';
-import { useCanvas } from '@/canvas/useCanvas';
-import { useLiveStore } from '@/store/liveStore';
-import { MockAPI } from '@/services/mockApi';
-import type { MockTransaction } from '@/mocks/transactions';
-import type { Pool } from '@/types';
-import { Inspector } from './Inspector';
-import { SandwichFeed } from './SandwichFeed';
+import { Panel, ExplainBox } from '@/components/panels';
+import { useUiStore } from '@/store/uiStore';
+import {
+  MempoolLanes,
+  MevLegend,
+  MevAttribution,
+  LiveAmmPanel,
+  LivePnlPanel,
+  NetworkStatus,
+  RecentSamples,
+} from '@/components/live';
 import './LiveSamplingPage.css';
 
-const api = new MockAPI();
-const TICK_MS = 1500;
+const LIVE_BADGE = (
+  <span className="dtm-live-badge">
+    <span className="dtm-pulse" />
+    LIVE
+  </span>
+);
 
 export function LiveSamplingPage() {
-  const mempool = useLiveStore((s) => s.mempool);
-  const ammPrice = useLiveStore((s) => s.ammPriceE18);
-  const [pool, setPool] = useState<Pool | null>(null);
-  const [allTxs, setAllTxs] = useState<MockTransaction[]>([]);
-  const [selectedHash, setSelectedHash] = useState<string | null>(null);
-  const cycleRef = useRef(0);
-
-  // Load pool + transactions once.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [pools, txs] = await Promise.all([api.listPools(), api.listTransactions()]);
-      if (cancelled) return;
-      const live =
-        pools.find((p) => p.token0.symbol === 'ETH' && p.token1.symbol === 'USDC') ?? pools[0];
-      setPool(live ?? null);
-      setAllTxs(txs);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Periodic push to keep the live feed ticking.
-  useEffect(() => {
-    if (allTxs.length === 0) return;
-    const id = setInterval(() => {
-      const cycle = cycleRef.current++ % allTxs.length;
-      const next = allTxs[cycle];
-      if (!next) return;
-      useLiveStore.getState().pushTx({
-        hash: next.hash,
-        from: next.from,
-        timestamp: Math.floor(Date.now() / 1000),
-        mevType: next.mevType,
-      });
-      // Tick the AMM price by a tiny delta so the chart re-renders.
-      const current = useLiveStore.getState().ammPriceE18;
-      const delta = current / 1000n;
-      useLiveStore.getState().setAmmPrice(current + delta);
-    }, TICK_MS);
-    return () => clearInterval(id);
-  }, [allTxs]);
-
-  // Selected tx from the full transaction list (for swap details).
-  const selectedTx = useMemo(
-    () => (selectedHash ? allTxs.find((t) => t.hash === selectedHash) ?? null : null),
-    [selectedHash, allTxs],
-  );
-
-  // Build a hash→tx lookup for the feed's amount column.
-  const txsByHash = useMemo(() => {
-    const m = new Map<string, MockTransaction>();
-    for (const t of allTxs) m.set(t.hash, t);
-    return m;
-  }, [allTxs]);
-
-  // Canvas draw: re-runs whenever mempool length or price changes.
-  const { ref } = useCanvas(
-    (ctx, size) => {
-      if (pool) drawAmmCurve(ctx, size, pool, allTxs);
-    },
-    [ammPrice, mempool],
-  );
+  const setLensStage = useUiStore((s) => s.setLensStage);
 
   return (
-    <div className="dtm-live-grid" data-testid="live-sampling-grid">
-      <Panel title="AMM Curve" testId="amm-curve-panel">
-        <canvas ref={ref} className="dtm-canvas dtm-canvas-curve" />
-        <ExplainBox title="What does the AMM curve show?">
-          The blue curve is the constant-product hyperbola x*y=k.  Each
-          dot is a historic swap: red when token0 was sold, green when
-          token1 was sold.  The yellow dot is the current reserves.
+    <div className="dtm-page dtm-page-live is-active" data-testid="live-page">
+      <div className="dtm-container">
+        <ExplainBox testId="live-sampling-explain">
+          <strong>实时采样模式</strong>：DTM 通过 WebSocket 直连以太坊节点，实时订阅 Mempool 中的待处理交易。
+          你看到的就是
+          <span style={{ color: 'var(--dtm-coral)' }}>此刻</span>
+          区块链上正在发生的事。当采样到 MEV 策略活动时，右上角会弹出标注，你可以一键"放入显微镜"进行深度分析。
         </ExplainBox>
-      </Panel>
+        <div className="dtm-grid-3">
+          {/* LEFT column */}
+          <div>
+            <div style={{ marginBottom: '0.7rem' }}>
+              <Panel
+                title="Mempool 泳道"
+                right={LIVE_BADGE}
+                testId="mempool-panel"
+              >
+                <MevLegend />
+                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                  <MempoolLanes
+                    onEnterMicroscope={() => {
+                      setLensStage('capture');
+                    }}
+                  />
+                </div>
+              </Panel>
+            </div>
+            <Panel
+              title="MEV 策略归因"
+              dotColor="var(--dtm-amber)"
+              testId="mev-attribution-panel"
+            >
+              <MevAttribution />
+            </Panel>
+          </div>
 
-      <Panel title="Sandwich Feed" testId="sandwich-feed-panel">
-        <SandwichFeed
-          entries={mempool}
-          txs={txsByHash}
-          selectedHash={selectedHash}
-          onSelect={setSelectedHash}
-        />
-        <ExplainBox title="What is the feed?">
-          A live sample of pending transactions.  Sandwich attacks
-          appear in red, arbitrage in amber, JIT liquidity in cyan,
-          and liquidations in blue.  Click a row to inspect it.
-        </ExplainBox>
-      </Panel>
+          {/* CENTER column */}
+          <div>
+            <div style={{ marginBottom: '0.7rem' }}>
+              <Panel
+                title="实时 AMM 曲线 — WETH/USDC"
+                right={LIVE_BADGE}
+                testId="live-amm-panel"
+              >
+                <LiveAmmPanel />
+              </Panel>
+            </div>
+            <Panel
+              title="实时损益归因"
+              dotColor="var(--dtm-purple)"
+              testId="live-pnl-panel"
+            >
+              <LivePnlPanel />
+            </Panel>
+          </div>
 
-      <Panel title="Inspector" testId="inspector-panel">
-        <Inspector tx={selectedTx} />
-        <ExplainBox title="What is the inspector?">
-          The inspector shows the full transaction payload: hash, block,
-          gas, and decoded swap amounts.  Sandwiches also display the
-          bundled frontrun / victim / backrun transactions.
-        </ExplainBox>
-      </Panel>
+          {/* RIGHT column */}
+          <div>
+            <Panel
+              title="网络状态"
+              dotColor="var(--dtm-lime)"
+              testId="network-status-panel"
+            >
+              <NetworkStatus />
+            </Panel>
+            <div style={{ height: '0.7rem' }} />
+            <Panel
+              title="最近采样"
+              dotColor="var(--dtm-coral)"
+              testId="recent-samples-panel"
+            >
+              <RecentSamples />
+            </Panel>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
