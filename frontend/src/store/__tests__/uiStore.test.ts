@@ -4,7 +4,7 @@ import { useUiStore } from '../uiStore';
 describe('store/uiStore', () => {
   beforeEach(() => {
     useUiStore.setState({
-      page: 'dashboard',
+      page: 'live',
       mode: 'live',
       alerts: [],
       loading: false,
@@ -13,15 +13,17 @@ describe('store/uiStore', () => {
 
   it('initial state has the expected defaults', () => {
     const s = useUiStore.getState();
-    expect(s.page).toBe('dashboard');
+    expect(s.page).toBe('live');
     expect(s.mode).toBe('live');
     expect(s.alerts).toEqual([]);
     expect(s.loading).toBe(false);
   });
 
   it('setPage updates the active page', () => {
-    useUiStore.getState().setPage('mempool');
-    expect(useUiStore.getState().page).toBe('mempool');
+    useUiStore.getState().setPage('live');
+    expect(useUiStore.getState().page).toBe('live');
+    useUiStore.getState().setPage('fork');
+    expect(useUiStore.getState().page).toBe('fork');
   });
 
   it('setMode switches between live and replay', () => {

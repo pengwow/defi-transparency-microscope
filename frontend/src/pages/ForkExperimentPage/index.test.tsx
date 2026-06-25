@@ -58,7 +58,7 @@ const SCENARIOS = [
 ];
 
 beforeEach(() => {
-  useUiStore.setState({ page: 'experiments', mode: 'live', alerts: [], loading: false });
+  useUiStore.setState({ page: 'fork', mode: 'live', alerts: [], loading: false });
   useExperimentStore.getState().reset();
   useExperimentStore.getState().loadList(SCENARIOS);
   useExperimentStore.getState().open('a');

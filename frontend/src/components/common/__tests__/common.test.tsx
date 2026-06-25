@@ -28,7 +28,7 @@ afterEach(() => {
   // Reset UI store between tests so alerts don't leak.
   useUiStore.setState({
     alerts: [],
-    page: 'dashboard',
+    page: 'live',
     mode: 'live',
     loading: false,
     flashAlert: null,

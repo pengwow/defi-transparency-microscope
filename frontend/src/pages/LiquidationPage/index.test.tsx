@@ -35,7 +35,7 @@ const POSITIONS = [
 ];
 
 beforeEach(() => {
-  useUiStore.setState({ page: 'lending', mode: 'live', alerts: [], loading: false });
+  useUiStore.setState({ page: 'liquidation', mode: 'live', alerts: [], loading: false });
   usePositionStore.getState().reset();
   usePositionStore.getState().setLending(POSITIONS);
 });

@@ -28,7 +28,7 @@ import { useExperimentStore } from '@/store/experimentStore';
 
 beforeEach(() => {
   // Reset all relevant stores so we have a clean slate for each test.
-  useUiStore.setState({ page: 'dashboard', mode: 'live', alerts: [], loading: false });
+  useUiStore.setState({ page: 'live', mode: 'live', alerts: [], loading: false });
   useLiveStore.getState().reset();
   usePositionStore.getState().reset();
   useExperimentStore.getState().reset();

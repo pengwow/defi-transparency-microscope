@@ -11,12 +11,12 @@
 import { create } from 'zustand';
 
 export type Page =
-  | 'dashboard'
-  | 'mempool'
-  | 'transactions'
-  | 'lending'
-  | 'positions'
-  | 'experiments'
+  | 'live'
+  | 'fork'
+  | 'liquidation'
+  | 'lpil'
+  | 'edu'
+  | 'report'
   | 'settings';
 
 export type Mode = 'live' | 'replay';
@@ -80,7 +80,7 @@ let alertSeq = 0;
 const DEFAULT_BLOCK_NUMBER = 22_180_542;
 
 export const useUiStore = create<UiState>((set) => ({
-  page: 'dashboard',
+  page: 'live',
   mode: 'live',
   alerts: [],
   loading: false,
