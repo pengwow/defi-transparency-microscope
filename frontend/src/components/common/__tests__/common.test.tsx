@@ -57,10 +57,30 @@ describe('ErrorBoundary', () => {
 });
 
 describe('LoadingScreen', () => {
-  it('renders a progressbar with the right value', () => {
-    render(<LoadingScreen progress={0.5} message="loading…" />);
-    const bar = screen.getByRole('progressbar');
-    expect(bar.getAttribute('aria-valuenow')).toBe('50');
+  it('invokes onReady after minDurationMs', () => {
+    vi.useFakeTimers();
+    const cb = vi.fn();
+    render(<LoadingScreen onReady={cb} minDurationMs={2500} />);
+    expect(cb).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(2500);
+    });
+    expect(cb).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('renders the microscope logo and Chinese title', () => {
+    const { rerender } = render(<LoadingScreen />);
+    // Microscope emoji in the logo tile.
+    expect(screen.getByLabelText('DeFi 透明显微镜 loading logo')).toHaveTextContent('🔬');
+    // Playfair title.
+    expect(screen.getByText('DeFi 透明显微镜')).toBeInTheDocument();
+    // Default subtitle.
+    expect(screen.getByText(/正在初始化链上机理仿真实验室/)).toBeInTheDocument();
+
+    // Custom subtitle override.
+    rerender(<LoadingScreen subtitle="正在初始化…" />);
+    expect(screen.getByText('正在初始化…')).toBeInTheDocument();
   });
 });
 

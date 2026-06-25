@@ -127,7 +127,7 @@ export function App() {
   }, []);
 
   if (!ready) {
-    return <LoadingScreen message="Loading DeFi data…" />;
+    return <LoadingScreen />;
   }
 
   const CurrentPage = PAGES[page] ?? ReportPage;
