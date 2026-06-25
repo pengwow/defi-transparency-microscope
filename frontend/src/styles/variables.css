@@ -1,44 +1,45 @@
 /**
  * CSS custom properties (variables).
  *
- * These are the design tokens for the entire app — colours, spacing,
- * typography, shadows.  Components should reference variables instead
- * of hard-coding values, so a theme change is a one-line edit.
+ * 设计 token 来自 DTM_Demo.html 的 :root 块，名字统一加 `--dtm-` 前缀。
+ * 颜色、间距、字号、阴影、z-index 等都从此处引用；后续 batch 在
+ * `demo.css` 中以 `.dtm-` 前缀的类名落地 demo 视觉。
+ *
+ * 兼容期：仍保留 `--color-*` / `--font-*` 别名，让 `common.css`
+ * 现有规则在迁移期间继续工作；后续 task 1.2 之后会逐步切到新名。
  */
 
 :root {
-  /* Surfaces — dark by default. */
-  --color-bg: #0b1020;
-  --color-surface: #131a30;
-  --color-surface-alt: #1a2240;
-  --color-border: #1f2a44;
-  --color-border-strong: #2c3a5e;
+  /* ===== Surfaces ===== */
+  --dtm-bg-deep: #020408;
+  --dtm-bg-mid: #060a14;
+  --dtm-bg-surface: #0c1220;
+  --dtm-bg-card: #111a2e;
+  --dtm-bg-hover: #1a2540;
 
-  /* Text. */
-  --color-text: #e6e8ef;
-  --color-text-muted: #9aa4c0;
-  --color-text-dim: #6b7592;
+  /* ===== Accents ===== */
+  --dtm-cyan: #00e5ff;
+  --dtm-amber: #ffab40;
+  --dtm-coral: #ff5e5e;
+  --dtm-lime: #69f0ae;
+  --dtm-purple: #b388ff;
+  --dtm-blue: #448aff;
 
-  /* Accents. */
-  --color-accent: #4f8cff;
-  --color-accent-soft: rgba(79, 140, 255, 0.18);
-  --color-success: #5bd17b;
-  --color-warn: #ffb84f;
-  --color-danger: #ff6b6b;
-  --color-info: #4fd1c5;
+  /* ===== Text ===== */
+  --dtm-ink: #f0f4f8;
+  --dtm-sub: #8b9bb4;
+  --dtm-muted: #5a6a82;
 
-  /* Typography. */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-base: 13px;
-  --font-size-md: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 24px;
+  /* ===== Lines / glows ===== */
+  --dtm-rule: rgba(139, 155, 180, 0.06);
+  --dtm-glow: rgba(0, 229, 255, 0.1);
 
-  /* Spacing — 4 px grid. */
+  /* ===== Fonts ===== */
+  --dtm-font-sans: 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --dtm-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --dtm-font-display: 'Playfair Display', Georgia, serif;
+
+  /* ===== Spacing (4 px grid) ===== */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -47,21 +48,47 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  /* Radius. */
+  /* ===== Radius ===== */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
   --radius-pill: 9999px;
 
-  /* Shadows. */
+  /* ===== Shadows ===== */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 6px 18px rgba(0, 0, 0, 0.5);
 
-  /* Z-index scale. */
+  /* ===== Z-index ===== */
   --z-base: 0;
   --z-panel: 10;
   --z-overlay: 100;
   --z-toast: 1000;
   --z-modal: 1100;
+  --z-lens: 3000;
+
+  /* ===== Compat aliases (consumed by common.css during transition) ===== */
+  --color-bg: var(--dtm-bg-surface);
+  --color-surface: var(--dtm-bg-surface);
+  --color-surface-alt: var(--dtm-bg-card);
+  --color-border: var(--dtm-rule);
+  --color-border-strong: var(--dtm-bg-hover);
+  --color-text: var(--dtm-ink);
+  --color-text-muted: var(--dtm-sub);
+  --color-text-dim: var(--dtm-muted);
+  --color-accent: var(--dtm-cyan);
+  --color-accent-soft: var(--dtm-glow);
+  --color-success: var(--dtm-lime);
+  --color-warn: var(--dtm-amber);
+  --color-danger: var(--dtm-coral);
+  --color-info: var(--dtm-blue);
+  --font-sans: var(--dtm-font-sans);
+  --font-mono: var(--dtm-font-mono);
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
 }
