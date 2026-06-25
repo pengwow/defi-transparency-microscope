@@ -20,6 +20,8 @@ export interface StubProviderOptions {
   blockNull?: boolean;
   transaction?: unknown;
   transactionNull?: boolean;
+  sendResult?: unknown;
+  sendImpl?: (method: string, params: unknown) => Promise<unknown>;
 }
 
 export interface StubProviderHandle {
@@ -32,6 +34,7 @@ export interface StubProviderHandle {
     call: MockInstance;
     getBlock: MockInstance;
     getTransaction: MockInstance;
+    send: MockInstance;
   };
 }
 
@@ -83,6 +86,9 @@ export function makeStubProvider(opts: StubProviderOptions = {}): StubProviderHa
     call: vi.spyOn(provider, 'call').mockResolvedValue(callResult),
     getBlock: vi.spyOn(provider, 'getBlock').mockResolvedValue(block as never),
     getTransaction: vi.spyOn(provider, 'getTransaction').mockResolvedValue(transaction as never),
+    send: opts.sendImpl
+      ? vi.spyOn(provider, 'send').mockImplementation(opts.sendImpl)
+      : vi.spyOn(provider, 'send').mockResolvedValue(opts.sendResult),
   };
 
   return { provider, mocks };

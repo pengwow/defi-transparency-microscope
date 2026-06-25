@@ -37,6 +37,11 @@ export async function buildTestApp(opts: BuildTestAppOptions = {}): Promise<Buil
     chainId: opts.chainId ?? 1,
     logLevel: 'silent',
     cacheTtlMs: 5000,
+    liquidationPollMs: 1000,
+    liquidationLookback: 10,
+    ammSyncPollMs: 1000,
+    ammSyncLookback: 10,
+    ammSyncDebounceMs: 50,
   };
   const app = await buildServer({ config, provider, wsHealth, ...(opts.server ?? {}) });
   await app.ready();

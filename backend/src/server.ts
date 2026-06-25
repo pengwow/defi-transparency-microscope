@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import websocket from '@fastify/websocket';
 import { JsonRpcProvider } from 'ethers';
 import { ZodError } from 'zod';
 
@@ -9,6 +10,13 @@ import { isHttpError } from './errors.js';
 import { EthersChainProvider, type ChainProvider } from './chain/provider.js';
 import { CachedProvider } from './chain/cachedProvider.js';
 import { createWsProvider } from './chain/wsProvider.js';
+import { MempoolSource, type MempoolTransport } from './chain/mempool.js';
+import { LiquidationWatcher } from './chain/liquidationWatcher.js';
+import { AmmSyncWatcher } from './chain/ammSyncWatcher.js';
+import { WSHub } from './ws/hub.js';
+import { MessageBatcher } from './ws/batcher.js';
+import { wsRoutes } from './ws/routes.js';
+import { WSTopic } from './ws/topics.js';
 import healthRoute from './routes/health.js';
 import poolsRoute from './routes/pools.js';
 import transactionsRoute from './routes/transactions.js';
@@ -21,6 +29,8 @@ declare module 'fastify' {
     provider: ChainProvider;
     /** Tiny health state source used only by /api/v1/health. */
     wsHealth: { isWebSocketConnected(): boolean };
+    /** WebSocket registry. Routes register/unregister sockets with this. */
+    hub: WSHub;
   }
 }
 
@@ -34,6 +44,32 @@ export interface BuildServerOptions {
    * machine; in tests callers can inject a stub.
    */
   wsHealth?: { isWebSocketConnected(): boolean };
+  /**
+   * Optional WebSocket hub. When omitted the server creates one with
+   * default options and starts the heartbeat. Tests pass a pre-built
+   * hub to keep their lifecycle under their own control.
+   */
+  hub?: WSHub;
+  /**
+   * Optional mempool source. When provided, the source's emissions
+   * are wired into the hub's `mempool` topic (batched through a
+   * `MessageBatcher` if `mempoolBatcher` is also provided). When
+   * omitted, the server creates no mempool source and emits nothing
+   * on that topic.
+   */
+  mempoolSource?: MempoolSource;
+  /** Optional batcher for mempool messages. */
+  mempoolBatcher?: MessageBatcher<unknown>;
+  /** Optional Aave V3 liquidation watcher. */
+  liquidationWatcher?: LiquidationWatcher;
+  /** Optional AMM sync watcher. */
+  ammSyncWatcher?: AmmSyncWatcher;
+  /**
+   * Optional transport for the mempool source. When `mempoolSource`
+   * is omitted but this is provided, the server builds a default
+   * `MempoolSource` from it.
+   */
+  mempoolTransport?: MempoolTransport | null;
 }
 
 const DEFAULT_WS_HEALTH: { isWebSocketConnected(): boolean } = {
@@ -72,6 +108,9 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   const config = opts.config ?? loadConfig();
   const { provider } = opts;
   const wsHealth = opts.wsHealth ?? DEFAULT_WS_HEALTH;
+  const ownsHub = !opts.hub;
+  const hub = opts.hub ?? new WSHub();
+  if (ownsHub) hub.startHeartbeat();
 
   const app = Fastify({
     logger,
@@ -81,6 +120,7 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
 
   app.decorate('provider', provider);
   app.decorate('wsHealth', wsHealth);
+  app.decorate('hub', hub);
 
   // Bigints must be serialised as decimal strings (spec §7). Fastify's
   // default JSON.stringify throws on BigInt; we add a preSerialization
@@ -121,6 +161,10 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   });
 
   await app.register(cors, { origin: true });
+  // @fastify/websocket is registered here (vs the route file) so the
+  // hub is available to the route plugin via the app decorator.
+  await app.register(websocket);
+  await app.register(wsRoutes, { hub });
 
   // Routes are registered under /api/v1 via the per-plugin `prefix` option
   // so each route file declares short, relative paths.
@@ -129,6 +173,56 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
   await app.register(transactionsRoute, { prefix: '/api/v1' });
   await app.register(positionsRoute, { prefix: '/api/v1' });
   await app.register(experimentsRoute, { prefix: '/api/v1' });
+
+  // --- Event sources wiring ---------------------------------------
+  // Mempool: the source is owned either by the caller (tests) or
+  // created here. A batcher debounces per the spec §8.5 (100 ms).
+  let mempoolSource: MempoolSource | undefined = opts.mempoolSource;
+  let mempoolBatcher: MessageBatcher<unknown> | undefined = opts.mempoolBatcher;
+  if (!mempoolSource && opts.mempoolTransport) {
+    mempoolSource = new MempoolSource({ provider, transport: opts.mempoolTransport });
+  }
+  if (mempoolSource) {
+    if (!mempoolBatcher) mempoolBatcher = new MessageBatcher<unknown>({ flushIntervalMs: 100 });
+    mempoolBatcher.onFlush((batch) => {
+      for (const tx of batch) {
+        hub.broadcast(WSTopic.Mempool, {
+          type: 'mempool_tx',
+          // The source emits PendingTx; the broadcast shape matches.
+          data: tx as never,
+        });
+      }
+    });
+    mempoolSource.onMessage((txs) => {
+      for (const tx of txs) mempoolBatcher!.add(tx);
+    });
+    mempoolSource.start();
+  }
+
+  // Liquidation: simple pass-through, no batching.
+  if (opts.liquidationWatcher) {
+    opts.liquidationWatcher.onEvent((evt) => {
+      hub.broadcast(WSTopic.Liquidations, { type: 'liquidation_event', data: evt });
+    });
+    opts.liquidationWatcher.start();
+  }
+
+  // AMM sync: simple pass-through.
+  if (opts.ammSyncWatcher) {
+    opts.ammSyncWatcher.onEvent((evt) => {
+      hub.broadcast(WSTopic.AmmSync, { type: 'amm_sync', data: evt });
+    });
+    opts.ammSyncWatcher.start();
+  }
+
+  // Ensure we tear down owned resources on app close.
+  app.addHook('onClose', async () => {
+    mempoolSource?.stop();
+    mempoolBatcher?.stop();
+    opts.liquidationWatcher?.stop();
+    opts.ammSyncWatcher?.stop();
+    if (ownsHub) hub.stop();
+  });
 
   return app as unknown as FastifyInstance;
 }
@@ -143,7 +237,28 @@ async function start(): Promise<void> {
     ? { isWebSocketConnected: () => wsWrap.state === 'connected' }
     : DEFAULT_WS_HEALTH;
 
-  const app = await buildServer({ config, provider, wsHealth });
+  // Production: spin up the liquidation + AMM watchers against the
+  // cached provider. The mempool source is started in HTTP-poll
+  // mode by default (no WS URL configured) and will keep that mode
+  // unless `RPC_WS_URL` is set, in which case the WS transport is
+  // wrapped by the source automatically.
+  const liquidationWatcher = new LiquidationWatcher(provider, {
+    pollIntervalMs: config.liquidationPollMs,
+    lookbackBlocks: config.liquidationLookback,
+  });
+  const ammSyncWatcher = new AmmSyncWatcher(provider, {
+    pollIntervalMs: config.ammSyncPollMs,
+    lookbackBlocks: config.ammSyncLookback,
+    debounceMs: config.ammSyncDebounceMs,
+  });
+
+  const app = await buildServer({
+    config,
+    provider,
+    wsHealth,
+    liquidationWatcher,
+    ammSyncWatcher,
+  });
 
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info({ signal }, 'shutting down');

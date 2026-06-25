@@ -22,6 +22,7 @@ function makeMockProvider(): ChainProvider & {
   getBlock: ReturnType<typeof vi.fn>;
   getTransaction: ReturnType<typeof vi.fn>;
   getNetwork: ReturnType<typeof vi.fn>;
+  send: ReturnType<typeof vi.fn>;
 } {
   return {
     getBlockNumber: vi.fn(async () => 100),
@@ -32,6 +33,7 @@ function makeMockProvider(): ChainProvider & {
     getBlock: vi.fn(async () => null),
     getTransaction: vi.fn(async () => null),
     getNetwork: vi.fn(async () => ({ chainId: 1n, name: 'mainnet' }) as never),
+    send: vi.fn(async () => null),
   };
 }
 

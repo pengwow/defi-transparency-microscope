@@ -142,4 +142,8 @@ export class CachedProvider implements ChainProvider {
   getTransaction(hash: string): Promise<null | TransactionResponse> {
     return this.inner.getTransaction(hash);
   }
+
+  send(method: string, params: Array<unknown> | object): Promise<unknown> {
+    return this.inner.send(method, params);
+  }
 }

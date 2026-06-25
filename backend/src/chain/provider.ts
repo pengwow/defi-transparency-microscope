@@ -56,6 +56,13 @@ export interface ChainProvider {
 
   /** Transaction by hash; null if unknown. */
   getTransaction(hash: string): Promise<null | TransactionResponse>;
+
+  /**
+   * Low-level JSON-RPC passthrough. Used for raw methods that the
+   * high-level helpers don't expose, e.g. `eth_subscribe` and
+   * `eth_pendingTransactions` for the mempool source.
+   */
+  send(method: string, params: Array<unknown> | object): Promise<unknown>;
 }
 
 /**
@@ -98,6 +105,10 @@ export class EthersChainProvider implements ChainProvider {
 
   getTransaction(hash: string): Promise<null | TransactionResponse> {
     return this.provider.getTransaction(hash);
+  }
+
+  send(method: string, params: Array<unknown> | object): Promise<unknown> {
+    return this.provider.send(method, params as never);
   }
 
   /**

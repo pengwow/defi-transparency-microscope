@@ -36,6 +36,7 @@ function makeProvider(): ChainProvider {
     getLogs: async () => [],
     getBlock: async () => null,
     getTransaction: async () => null,
+    send: async () => null,
   };
 }
 

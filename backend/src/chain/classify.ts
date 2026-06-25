@@ -25,6 +25,7 @@ import type { TxType } from './types.js';
 
 /** Keccak-256 hashes of the events we recognise. Exported for tests + reuse. */
 export const TOPIC_V2_SWAP = id('Swap(address,uint256,uint256,uint256,uint256,address)');
+export const TOPIC_V2_SYNC = id('Sync(uint112,uint112)');
 export const TOPIC_V3_SWAP = id(
   'Swap(address,address,int256,int256,uint160,uint128,int24)',
 );

@@ -23,6 +23,7 @@ function makeProvider(): ChainProvider {
     getLogs: vi.fn(async () => []),
     getBlock: vi.fn(async () => null),
     getTransaction: vi.fn(async () => null),
+    send: vi.fn(async () => null),
   };
 }
 

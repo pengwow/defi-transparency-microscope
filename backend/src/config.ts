@@ -7,6 +7,16 @@ export interface Config {
   chainId: number;
   logLevel: string;
   cacheTtlMs: number;
+  /** Poll interval for the Aave V3 liquidation watcher, in ms. */
+  liquidationPollMs: number;
+  /** How many trailing blocks the liquidation watcher scans per poll. */
+  liquidationLookback: number;
+  /** Poll interval for the AMM sync watcher, in ms. */
+  ammSyncPollMs: number;
+  /** How many trailing blocks the AMM sync watcher scans per poll. */
+  ammSyncLookback: number;
+  /** Debounce window for AMM sync emissions (per-pool coalescing), in ms. */
+  ammSyncDebounceMs: number;
 }
 
 const DEFAULT_RPC_URLS = [
@@ -49,6 +59,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     chainId: readNumber('CHAIN_ID', 1),
     logLevel: readString('LOG_LEVEL', 'info'),
     cacheTtlMs: readNumber('CACHE_TTL_MS', 5000),
+    liquidationPollMs: readNumber('LIQUIDATION_POLL_MS', 12_000),
+    liquidationLookback: readNumber('LIQUIDATION_LOOKBACK', 100),
+    ammSyncPollMs: readNumber('AMM_SYNC_POLL_MS', 12_000),
+    ammSyncLookback: readNumber('AMM_SYNC_LOOKBACK', 100),
+    ammSyncDebounceMs: readNumber('AMM_SYNC_DEBOUNCE_MS', 250),
   };
 }
 
