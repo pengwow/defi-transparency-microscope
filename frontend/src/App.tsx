@@ -88,7 +88,6 @@ export function App() {
       setReady(true);
     })().catch((err) => {
       // Surface load errors to the user.
-      // eslint-disable-next-line no-console
       console.error('App: initial data load failed', err);
       useUiStore.getState().pushAlert({
         level: 'error',

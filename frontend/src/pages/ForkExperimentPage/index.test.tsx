@@ -13,7 +13,7 @@ vi.mock('@/services/mockApi', () => {
     MockAPI: class {
       async runSandwichExperiment() {
         return {
-          config: {} as any,
+          config: {} as unknown as Record<string, unknown>,
           results: [
             { attackerProfit: 0.1, victimLoss: 0.05 },
             { attackerProfit: 0.12, victimLoss: 0.06 },
@@ -24,7 +24,7 @@ vi.mock('@/services/mockApi', () => {
       }
       async runIlExperiment() {
         return {
-          config: {} as any,
+          config: {} as unknown as Record<string, unknown>,
           results: [{ ilV2: 0.1, ilV3: 0.12, priceRatio: 1.5 }],
           summary: { ilV2: 0.1, ilV3: 0.12 },
           durationMs: 1,
@@ -32,7 +32,7 @@ vi.mock('@/services/mockApi', () => {
       }
       async runAttributionExperiment() {
         return {
-          config: {} as any,
+          config: {} as unknown as Record<string, unknown>,
           results: [{ totalE18: 0.5, priceImpact: 0.3, fees: 0.1, gasCost: 0.05, rebates: 0 }],
           summary: { totalE18: 0.5 },
           durationMs: 1,

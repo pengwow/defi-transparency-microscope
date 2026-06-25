@@ -5,7 +5,7 @@
  * the design tokens, and the layout is plain flex/grid.
  */
 
-@import './variables.css';
+@import '../../styles/variables.css';
 
 /* ErrorBoundary fallback. */
 .dtm-error-boundary {
