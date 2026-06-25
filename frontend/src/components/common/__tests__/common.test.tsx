@@ -204,16 +204,45 @@ describe('LensTransition', () => {
 });
 
 describe('FlashAlert', () => {
-  it('renders nothing when no alerts are present', () => {
-    render(<FlashAlert />);
+  it('renders nothing when no flashAlert is set', () => {
+    render(<FlashAlert onEnterMicroscope={() => undefined} />);
     expect(screen.queryByTestId('flash-alert')).toBeNull();
   });
 
-  it('renders the most recent alert', () => {
-    useUiStore.getState().pushAlert({ level: 'info', message: 'hello' });
-    render(<FlashAlert />);
+  it('renders the demo title and body when a flashAlert is in the store', () => {
+    useUiStore.getState().pushFlashAlert({
+      type: 'sandwich',
+      title: '三明治攻击检测',
+      body: '套利者 front-run + back-run 一笔 50 WETH 交易',
+    });
+    render(<FlashAlert onEnterMicroscope={() => undefined} />);
     expect(screen.getByTestId('flash-alert')).toBeInTheDocument();
-    expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.getByText('三明治攻击检测')).toBeInTheDocument();
+    expect(screen.getByText(/套利者 front-run/)).toBeInTheDocument();
+  });
+
+  it('invokes onEnterMicroscope when the "放入显微镜" button is clicked', () => {
+    useUiStore.getState().pushFlashAlert({
+      type: 'jit',
+      title: 'JIT 流动性',
+      body: '检测到即时流动性提供',
+    });
+    const cb = vi.fn();
+    render(<FlashAlert onEnterMicroscope={cb} />);
+    fireEvent.click(screen.getByRole('button', { name: /放入显微镜/ }));
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the flashAlert when "忽略" is clicked', () => {
+    useUiStore.getState().pushFlashAlert({
+      type: 'liquidation',
+      title: '清算',
+      body: '某头寸即将被清算',
+    });
+    render(<FlashAlert onEnterMicroscope={() => undefined} />);
+    expect(screen.getByTestId('flash-alert')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /忽略/ }));
+    expect(useUiStore.getState().flashAlert).toBeNull();
   });
 });
 

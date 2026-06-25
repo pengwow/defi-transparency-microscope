@@ -1,59 +1,70 @@
 /**
- * FlashAlert — toast-like alert that displays the most recent UI alert
- * from the store.  The list itself is managed by `useUiStore`; this
- * component is purely a presentational view of the latest entry.
+ * FlashAlert — demo-style flash notification anchored to the top-right
+ * corner.  Reads the single `flashAlert` payload from `useUiStore` and
+ * renders it with a coral border, a 🚨 emoji, title, body, and two
+ * actions: "🔬 放入显微镜" and "忽略".
  *
- * Use `<FlashAlert />` once near the root of the app, and push alerts
- * via `useUiStore.getState().pushAlert({...})`.
+ * Auto-dismisses after 8 seconds; hovering pauses the timer.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUiStore } from '@/store/uiStore';
 
-const AUTO_DISMISS_MS = 4000;
+const AUTO_DISMISS_MS = 8_000;
 
-export function FlashAlert() {
-  const alerts = useUiStore((s) => s.alerts);
-  const clearAlerts = useUiStore((s) => s.clearAlerts);
-  const [visible, setVisible] = useState(false);
+export interface FlashAlertProps {
+  /** Called when the user clicks "放入显微镜". */
+  onEnterMicroscope: () => void;
+}
 
-  // Show the most recent alert, auto-dismiss after a short delay.
-  const latest = alerts[alerts.length - 1];
+export function FlashAlert({ onEnterMicroscope }: FlashAlertProps) {
+  const alert = useUiStore((s) => s.flashAlert);
+  const dismiss = useUiStore((s) => s.dismissFlashAlert);
+  const [hovered, setHovered] = useState(false);
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
 
   useEffect(() => {
-    if (!latest) {
-      setVisible(false);
-      return;
-    }
-    setVisible(true);
-    const t = setTimeout(() => {
-      setVisible(false);
-      // Remove only the last one so the list doesn't grow unbounded.
-      const next = alerts.slice(0, -1);
-      if (next.length === 0) clearAlerts();
-      else useUiStore.setState({ alerts: next });
-    }, AUTO_DISMISS_MS);
+    if (!alert) return;
+    if (hovered) return;
+    const t = setTimeout(() => dismissRef.current(), AUTO_DISMISS_MS);
     return () => clearTimeout(t);
-  }, [latest, alerts, clearAlerts]);
+  }, [alert, hovered]);
 
-  if (!latest || !visible) return null;
+  if (!alert) return null;
 
   return (
     <div
-      className={`dtm-flash-alert dtm-flash-${latest.level}`}
-      role="status"
-      aria-live="polite"
+      className={`dtm-flash-alert dtm-flash-${alert.type}`}
+      role="alert"
+      aria-live="assertive"
       data-testid="flash-alert"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <span className="dtm-flash-message">{latest.message}</span>
-      <button
-        type="button"
-        className="dtm-flash-dismiss"
-        aria-label="Dismiss"
-        onClick={() => setVisible(false)}
-      >
-        ×
-      </button>
+      <div className="dtm-flash-icon" aria-hidden="true">🚨</div>
+      <div className="dtm-flash-body">
+        <div className="dtm-flash-title">{alert.title}</div>
+        <div className="dtm-flash-text">{alert.body}</div>
+      </div>
+      <div className="dtm-flash-actions">
+        <button
+          type="button"
+          className="dtm-flash-btn dtm-flash-btn-primary"
+          onClick={() => {
+            onEnterMicroscope();
+          }}
+        >
+          🔬 放入显微镜
+        </button>
+        <button
+          type="button"
+          className="dtm-flash-btn dtm-flash-btn-secondary"
+          onClick={() => dismiss()}
+        >
+          忽略
+        </button>
+      </div>
     </div>
   );
 }

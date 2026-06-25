@@ -148,7 +148,7 @@ export function App() {
           <main className="dtm-app-main" data-testid="app-main">
             <CurrentPage />
           </main>
-          <FlashAlert />
+          <FlashAlert onEnterMicroscope={() => undefined} />
         </div>
       </LensTransition>
     </ErrorBoundary>

@@ -623,3 +623,111 @@
     display: none;
   }
 }
+
+/* ----- FlashAlert (demo) ----- */
+.dtm-flash-alert {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+  min-width: 320px;
+  max-width: 380px;
+  background: linear-gradient(135deg, rgba(255, 94, 94, 0.18), rgba(255, 171, 64, 0.1));
+  border: 2px solid var(--dtm-coral);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(255, 94, 94, 0.25);
+  backdrop-filter: blur(10px);
+  z-index: 1500;
+  animation: dtm-flashSlideIn 0.3s ease-out;
+}
+
+@keyframes dtm-flashSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dtm-flash-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dtm-flash-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dtm-flash-title {
+  color: var(--dtm-coral);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.25rem;
+}
+
+.dtm-flash-text {
+  color: var(--dtm-ink);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.dtm-flash-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.dtm-flash-btn {
+  padding: 0.4rem 0.7rem;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: var(--dtm-font-sans);
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+
+.dtm-flash-btn-primary {
+  background: linear-gradient(135deg, var(--dtm-coral), #ff8a4c);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.dtm-flash-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 94, 94, 0.4);
+}
+
+.dtm-flash-btn-secondary {
+  background: var(--dtm-bg-surface);
+  color: var(--dtm-sub);
+  border-color: var(--dtm-rule);
+}
+
+.dtm-flash-btn-secondary:hover {
+  color: var(--dtm-ink);
+  border-color: var(--dtm-bg-hover);
+}
+
+.dtm-flash-sandwich {
+  border-color: var(--dtm-coral);
+}
+.dtm-flash-jit {
+  border-color: var(--dtm-amber);
+}
+.dtm-flash-liquidation {
+  border-color: var(--dtm-purple);
+}
