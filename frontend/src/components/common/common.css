@@ -731,3 +731,153 @@
 .dtm-flash-liquidation {
   border-color: var(--dtm-purple);
 }
+
+/* ----- LensTransition (demo) ----- */
+.dtm-lens-transition {
+  position: relative;
+}
+
+.dtm-lens-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 4, 8, 0.78);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  animation: dtm-lensFadeIn 0.35s ease-out;
+}
+
+@keyframes dtm-lensFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dtm-lens-scanline {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 229, 255, 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 100% 200%;
+  animation: dtm-lensScan 2.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes dtm-lensScan {
+  from { background-position: 0 -100%; }
+  to { background-position: 0 200%; }
+}
+
+.dtm-lens-circle {
+  position: relative;
+  width: min(560px, 80vmin);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid var(--dtm-cyan);
+  box-shadow:
+    0 0 40px rgba(0, 229, 255, 0.4),
+    inset 0 0 60px rgba(0, 229, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 229, 255, 0.05) 0%,
+    transparent 70%
+  );
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dtm-lens-transition.is-zooming .dtm-lens-circle {
+  transform: scale(300vmax);
+  border-width: 4px;
+  box-shadow: 0 0 80px rgba(0, 229, 255, 0.6);
+}
+
+.dtm-lens-title {
+  font-family: var(--dtm-font-display);
+  font-size: 1.6rem;
+  color: var(--dtm-cyan);
+  text-shadow: 0 0 18px rgba(0, 229, 255, 0.4);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.4rem;
+}
+
+.dtm-lens-subtitle {
+  color: var(--dtm-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  margin-bottom: 1.5rem;
+}
+
+.dtm-lens-steps {
+  display: flex;
+  gap: 0.85rem;
+  margin-bottom: 1.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dtm-lens-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--dtm-rule);
+  border-radius: 10px;
+  background: rgba(6, 10, 20, 0.5);
+  opacity: 0.6;
+  transition: all 0.3s;
+}
+
+.dtm-lens-step.is-active {
+  border-color: var(--dtm-cyan);
+  background: rgba(0, 229, 255, 0.08);
+  opacity: 1;
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.3);
+  animation: dtm-stepGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes dtm-stepGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(0, 229, 255, 0.55);
+  }
+}
+
+.dtm-lens-step-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.dtm-lens-step-label {
+  font-family: var(--dtm-font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--dtm-sub);
+}
+
+.dtm-lens-step.is-active .dtm-lens-step-label {
+  color: var(--dtm-cyan);
+}
+
+.dtm-lens-status {
+  font-family: var(--dtm-font-mono);
+  font-size: 0.8rem;
+  color: var(--dtm-cyan);
+  letter-spacing: 0.06em;
+  margin-top: 0.4rem;
+}

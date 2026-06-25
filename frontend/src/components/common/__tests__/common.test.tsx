@@ -192,14 +192,64 @@ describe('NavTabs', () => {
 });
 
 describe('LensTransition', () => {
-  it('reflects the current mode via data-mode', () => {
+  it('renders the 4 stage labels CAPTURE / FORK / PARSE / READY when active', () => {
+    useUiStore.getState().setLensStage('capture');
+    render(
+      <LensTransition>
+        <span>child</span>
+      </LensTransition>,
+    );
+    expect(screen.getByText('CAPTURE')).toBeInTheDocument();
+    expect(screen.getByText('FORK')).toBeInTheDocument();
+    expect(screen.getByText('PARSE')).toBeInTheDocument();
+    expect(screen.getByText('READY')).toBeInTheDocument();
+  });
+
+  it('renders the overlay with is-active only when lensStage is not idle', () => {
+    const { rerender } = render(
+      <LensTransition>
+        <span>child</span>
+      </LensTransition>,
+    );
+    let el = screen.getByTestId('lens-transition');
+    expect(el.className).not.toContain('is-active');
+
+    useUiStore.getState().setLensStage('capture');
+    rerender(
+      <LensTransition>
+        <span>child</span>
+      </LensTransition>,
+    );
+    el = screen.getByTestId('lens-transition');
+    expect(el.className).toContain('is-active');
+  });
+
+  it('switches the active step when lensStage changes', () => {
+    useUiStore.getState().setLensStage('parse');
+    render(
+      <LensTransition>
+        <span>child</span>
+      </LensTransition>,
+    );
+    // The PARSE step should be marked active.
+    const steps = screen.getAllByTestId('lens-step');
+    const parseStep = steps.find((s) => s.getAttribute('data-stage') === 'parse');
+    expect(parseStep).toBeDefined();
+    expect(parseStep?.className).toContain('is-active');
+    const captureStep = steps.find((s) => s.getAttribute('data-stage') === 'capture');
+    expect(captureStep?.className).not.toContain('is-active');
+  });
+
+  it('adds is-zooming class when lensStage is "zooming"', () => {
+    useUiStore.getState().setLensStage('zooming');
     render(
       <LensTransition>
         <span>child</span>
       </LensTransition>,
     );
     const el = screen.getByTestId('lens-transition');
-    expect(el.getAttribute('data-mode')).toBe('live');
+    expect(el.className).toContain('is-zooming');
+    expect(el.className).toContain('is-active');
   });
 });
 
