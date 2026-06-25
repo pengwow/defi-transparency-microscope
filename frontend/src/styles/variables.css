@@ -1,0 +1,67 @@
+/**
+ * CSS custom properties (variables).
+ *
+ * These are the design tokens for the entire app — colours, spacing,
+ * typography, shadows.  Components should reference variables instead
+ * of hard-coding values, so a theme change is a one-line edit.
+ */
+
+:root {
+  /* Surfaces — dark by default. */
+  --color-bg: #0b1020;
+  --color-surface: #131a30;
+  --color-surface-alt: #1a2240;
+  --color-border: #1f2a44;
+  --color-border-strong: #2c3a5e;
+
+  /* Text. */
+  --color-text: #e6e8ef;
+  --color-text-muted: #9aa4c0;
+  --color-text-dim: #6b7592;
+
+  /* Accents. */
+  --color-accent: #4f8cff;
+  --color-accent-soft: rgba(79, 140, 255, 0.18);
+  --color-success: #5bd17b;
+  --color-warn: #ffb84f;
+  --color-danger: #ff6b6b;
+  --color-info: #4fd1c5;
+
+  /* Typography. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* Spacing — 4 px grid. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 9999px;
+
+  /* Shadows. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 6px 18px rgba(0, 0, 0, 0.5);
+
+  /* Z-index scale. */
+  --z-base: 0;
+  --z-panel: 10;
+  --z-overlay: 100;
+  --z-toast: 1000;
+  --z-modal: 1100;
+}
