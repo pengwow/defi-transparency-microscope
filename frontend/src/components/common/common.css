@@ -560,3 +560,66 @@
   pointer-events: none;
   z-index: 0;
 }
+
+/* ----- RealtimeClock (floating widget) ----- */
+.dtm-rtc-widget {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.85rem;
+  background: rgba(6, 10, 20, 0.78);
+  border: 1px solid var(--dtm-rule);
+  border-radius: 10px;
+  font-family: var(--dtm-font-mono);
+  font-size: 0.78rem;
+  color: var(--dtm-ink);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+.dtm-rtc-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dtm-lime);
+  box-shadow: 0 0 8px var(--dtm-lime);
+  animation: dtm-pdot 1.5s ease-in-out infinite;
+}
+
+.dtm-rtc-time {
+  color: var(--dtm-cyan);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.dtm-rtc-date {
+  color: var(--dtm-muted);
+  font-size: 0.72rem;
+}
+
+.dtm-rtc-sep {
+  width: 1px;
+  height: 1.1em;
+  background: var(--dtm-rule);
+}
+
+.dtm-rtc-block {
+  color: var(--dtm-cyan);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .dtm-rtc-widget {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.7rem;
+    gap: 0.45rem;
+  }
+  .dtm-rtc-date {
+    display: none;
+  }
+}

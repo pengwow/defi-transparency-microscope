@@ -1,43 +1,92 @@
 /**
- * RealtimeClock — display the current time, updated each second.
+ * RealtimeClock — floating demo-style widget that shows the current
+ * time, date, and an auto-incrementing "Block #" counter.
  *
- * Uses a `setInterval` driven by a ref so we never miss a tick when
- * the component re-renders for other reasons.  Cleans up on unmount.
+ * Ported from DTM_Demo.html.  Visually a fixed pill in the bottom-left
+ * corner with a lime pulse dot, the HH:MM:SS, the ISO date, a
+ * vertical separator, and the current block number in a mono font.
+ *
+ * The block number is owned by the uiStore (`blockNumber` slice).
+ * We sync the initial value into local state on mount and then bump
+ * the store value every `blockIntervalMs` (default 12s for the demo).
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { formatTime } from '@/utils/time';
+import { formatDate, formatTime } from '@/utils/time';
+import { useUiStore } from '@/store/uiStore';
 
 export interface RealtimeClockProps {
-  /** Show seconds (default true). */
+  /** Show seconds in the time string (default true). */
   showSeconds?: boolean;
-  /** Optional aria-label. */
+  /** Aria-label for the wrapper. */
   label?: string;
+  /** Override the initial block number (otherwise read from uiStore). */
+  block?: number;
+  /** How often the block number auto-advances, in ms. */
+  blockIntervalMs?: number;
 }
 
-export function RealtimeClock({ showSeconds = true, label = 'Current time' }: RealtimeClockProps) {
+export function RealtimeClock({
+  showSeconds = true,
+  label = 'Realtime clock widget',
+  block,
+  blockIntervalMs = 12_000,
+}: RealtimeClockProps) {
   const [now, setNow] = useState(() => Date.now());
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const storeBlock = useUiStore((s) => s.blockNumber);
+  const setStoreBlock = useUiStore((s) => s.setBlockNumber);
+  const [localBlock, setLocalBlock] = useState<number | null>(block ?? null);
 
+  // When the caller doesn't pin `block`, we read from the store and
+  // also push our auto-increments back into the store.
+  const blockValue = block ?? localBlock ?? storeBlock;
+  const blockRef = useRef(blockValue);
+  blockRef.current = blockValue;
+
+  // Drive the per-second clock.
   useEffect(() => {
-    timerRef.current = setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, []);
 
+  // Auto-advance block every blockIntervalMs.
+  useEffect(() => {
+    if (block !== undefined) return; // pinned — don't auto-increment
+    const id = setInterval(() => {
+      const next = (blockRef.current ?? 0) + 1;
+      if (localBlock === null) {
+        setStoreBlock(next);
+      } else {
+        setLocalBlock(next);
+      }
+    }, blockIntervalMs);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [block, blockIntervalMs, localBlock, setStoreBlock]);
+
   const ts = Math.floor(now / 1000);
-  let display = formatTime(ts);
-  if (!showSeconds) display = display.slice(0, 5);
+  let timeText = formatTime(ts);
+  if (!showSeconds) timeText = timeText.slice(0, 5);
+  const dateText = formatDate(ts);
 
   return (
-    <time
-      className="dtm-realtime-clock"
+    <div
+      className="dtm-rtc-widget"
+      role="group"
       aria-label={label}
-      dateTime={new Date(now).toISOString()}
       data-testid="realtime-clock"
     >
-      {display}
-    </time>
+      <span className="dtm-rtc-pulse" aria-hidden="true" />
+      <span className="dtm-rtc-time" data-testid="realtime-clock-time">
+        {timeText}
+      </span>
+      <span className="dtm-rtc-date" data-testid="realtime-clock-date">
+        {dateText}
+      </span>
+      <span className="dtm-rtc-sep" aria-hidden="true" />
+      <span className="dtm-rtc-block" data-testid="realtime-clock-block">
+        Block #{blockValue.toLocaleString('en-US')}
+      </span>
+    </div>
   );
 }
