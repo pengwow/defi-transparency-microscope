@@ -10,6 +10,16 @@
 
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+
+// Mock ECharts so the ReportPage can render under jsdom (no canvas getContext).
+vi.mock('echarts', () => ({
+  init: vi.fn(() => ({
+    setOption: vi.fn(),
+    dispose: vi.fn(),
+    resize: vi.fn(),
+  })),
+}));
+
 import { App } from './App';
 import { useUiStore } from '@/store/uiStore';
 import { useLiveStore } from '@/store/liveStore';
@@ -49,7 +59,7 @@ describe('App', () => {
   it('lands on the dashboard (report) page by default', async () => {
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByTestId('report-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('report-summary-panel')).toBeInTheDocument();
     });
   });
 

@@ -1,0 +1,25 @@
+/* Styles for the ExportButton. */
+
+.dtm-export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  color: #fff;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+  width: 100%;
+}
+
+.dtm-export-button:hover {
+  background: #3a78ec;
+}
+
+.dtm-export-button:active {
+  transform: scale(0.98);
+}

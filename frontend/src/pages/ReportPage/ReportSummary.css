@@ -1,0 +1,41 @@
+/* Styles for the ReportSummary tiles. */
+
+.dtm-report-summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.dtm-report-summary-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.dtm-report-summary-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dtm-report-summary-value {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.dtm-report-summary-tile[data-format='number'] .dtm-report-summary-value {
+  color: var(--color-accent);
+}
+
+.dtm-report-summary-tile[data-format='usd'] .dtm-report-summary-value {
+  color: var(--color-success);
+}
