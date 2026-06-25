@@ -91,10 +91,9 @@ describe('ForkExperimentPage (real)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('scenario-list-items')).toBeInTheDocument();
     });
-    const buttons = screen.getAllByRole('button').filter(
-      (b) => b.getAttribute('data-active') !== null || b.textContent?.includes('Scenario B'),
-    );
-    const bButton = screen.getAllByRole('button').find((b) => b.textContent?.includes('Scenario B'));
+    const bButton = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent?.includes('Scenario B'));
     if (bButton) {
       fireEvent.click(bButton);
       expect(useExperimentStore.getState().opened?.id).toBe('b');

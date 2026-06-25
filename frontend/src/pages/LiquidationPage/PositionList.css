@@ -1,0 +1,93 @@
+/* Styles for the PositionList. */
+
+.dtm-position-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.dtm-position-list-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.dtm-position-list-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-alt);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.dtm-position-list-row:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.dtm-position-list-row[data-active='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.dtm-position-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.dtm-position-list-id {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.dtm-position-list-hf {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.dtm-risk-critical {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.dtm-risk-warning {
+  background: var(--color-warn);
+  color: #1a1a1a;
+}
+
+.dtm-risk-ok {
+  background: var(--color-info);
+  color: #1a1a1a;
+}
+
+.dtm-risk-safe {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.dtm-position-list-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}

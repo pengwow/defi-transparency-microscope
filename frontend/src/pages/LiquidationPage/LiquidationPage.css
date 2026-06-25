@@ -1,0 +1,43 @@
+/* LiquidationPage layout — three columns. */
+
+.dtm-liquidation-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dtm-liquidation-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dtm-liquidation-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dtm-canvas-hf,
+.dtm-canvas-gauge {
+  display: block;
+  width: 100%;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.dtm-canvas-hf {
+  height: 280px;
+}
+
+.dtm-canvas-gauge {
+  height: 220px;
+}
+
+.dtm-risk-gauge-readout {
+  text-align: center;
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
