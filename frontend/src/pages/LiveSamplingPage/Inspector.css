@@ -1,0 +1,125 @@
+/* Styles for the Inspector panel. */
+
+.dtm-inspector,
+.dtm-inspector-empty {
+  font-size: var(--font-size-sm);
+}
+
+.dtm-inspector-empty p {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.dtm-inspector-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
+.dtm-inspector-grid dt {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dtm-inspector-grid dd {
+  margin: 0;
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.dtm-inspector-type {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  font-size: var(--font-size-xs);
+  margin-right: var(--space-2);
+}
+
+.dtm-inspector-mev {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+}
+
+.dtm-inspector-section {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.dtm-inspector-section h4 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dtm-inspector-swaps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dtm-inspector-swap {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.dtm-inspector-swap > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dtm-inspector-bundle {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  counter-reset: bundle;
+}
+
+.dtm-inspector-bundle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.dtm-inspector-bundle-role {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dtm-bundle-frontrun .dtm-inspector-bundle-role {
+  color: var(--color-warn);
+}
+.dtm-bundle-victim .dtm-inspector-bundle-role {
+  color: var(--color-danger);
+}
+.dtm-bundle-backrun .dtm-inspector-bundle-role {
+  color: var(--color-info);
+}

@@ -60,7 +60,7 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('tab', { name: 'Mempool' }));
     await waitFor(() => {
-      expect(screen.getByTestId('live-sampling-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('amm-curve-panel')).toBeInTheDocument();
     });
   });
 

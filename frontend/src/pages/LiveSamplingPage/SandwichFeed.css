@@ -1,0 +1,86 @@
+/* Styles for the SandwichFeed list. */
+
+.dtm-sandwich-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.dtm-sandwich-feed-empty {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.dtm-sandwich-feed-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 80px 80px;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-alt);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.dtm-sandwich-feed-row:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.dtm-sandwich-feed-row[data-active='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.dtm-sandwich-feed-time {
+  color: var(--color-text-muted);
+}
+
+.dtm-sandwich-feed-amount {
+  text-align: right;
+  color: var(--color-text);
+}
+
+.dtm-sandwich-feed-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.dtm-mev-sandwich {
+  background: var(--color-danger);
+  color: #fff;
+}
+.dtm-mev-arb {
+  background: var(--color-warn);
+  color: #1a1a1a;
+}
+.dtm-mev-jit {
+  background: var(--color-info);
+  color: #1a1a1a;
+}
+.dtm-mev-liquidation {
+  background: var(--color-accent);
+  color: #fff;
+}
+.dtm-mev-normal {
+  background: var(--color-border);
+  color: var(--color-text);
+}

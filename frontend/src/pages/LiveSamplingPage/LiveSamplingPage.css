@@ -1,0 +1,32 @@
+/* LiveSamplingPage layout — three-column grid that collapses on small screens. */
+
+.dtm-live-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dtm-live-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dtm-live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dtm-canvas {
+  display: block;
+  width: 100%;
+  height: 360px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.dtm-canvas-curve {
+  height: 360px;
+}
