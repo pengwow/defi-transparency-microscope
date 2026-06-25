@@ -29,7 +29,7 @@ import { useExperimentStore } from '@/store/experimentStore';
 import { useLiveStore } from '@/store/liveStore';
 import { usePositionStore } from '@/store/positionStore';
 import { useUiStore, type Page } from '@/store/uiStore';
-import { MockAPI } from '@/services/mockApi';
+import { currentAPI } from '@/services';
 import { runDemo, type DemoKind } from '@/services/demoScript';
 import { spotPriceE18 } from '@/algorithms/cpmm';
 import { EducationPage } from '@/pages/EducationPage';
@@ -39,7 +39,7 @@ import { LpIlPage } from '@/pages/LpIlPage';
 import { LiveSamplingPage } from '@/pages/LiveSamplingPage';
 import { ReportPage } from '@/pages/ReportPage';
 
-const api = new MockAPI();
+const api = currentAPI;
 
 /** Maps the canonical Page enum to a React component. */
 const PAGES: Record<Page, () => JSX.Element> = {
