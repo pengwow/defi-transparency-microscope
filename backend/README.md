@@ -1,120 +1,110 @@
-# DTM Backend
+# dtm-backend (Python · FastAPI · web3.py)
 
-DeFi Transparency Microscope — Node.js + Fastify backend service.
+> DeFi Transparency Microscope — Python backend.
+> Wire-compatible with the frontend `HttpAPI` / `WsClient` (the
+> frontend is unchanged and has no awareness of this rewrite).
 
-See [`docs/superpowers/specs/2026-06-25-dtm-backend-design.md`](../docs/superpowers/specs/2026-06-25-dtm-backend-design.md) for the full design.
+## Status
 
-## API contract
-
-The REST surface (9 endpoints under `/api/v1` + `/api/v1/health`) is
-documented in machine-readable form at [`openapi.yaml`](./openapi.yaml).
-The WebSocket feed (`GET /ws`) is intentionally outside the OpenAPI
-document; its protocol is defined in `src/ws/topics.ts` and
-`src/ws/routes.ts`.
+**Phase 1 — skeleton.** Only the `GET /api/v1/health` route is
+mounted.  The chain layer, REST routes, and WebSocket hub land in
+later phases — see [docs/superpowers/plans/2026-06-26-dtm-backend-python.md](../docs/superpowers/plans/2026-06-26-dtm-backend-python.md).
 
 ## Quick start
 
 ```bash
-# 1. install dependencies
-pnpm install
+# from repo root, or `cd backend`
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
 
-# 2. copy the env template and edit as needed
-cp .env.example .env
+# Run the server (port 8000 by default)
+dtm-backend
 
-# 3. dev mode (auto-reload via tsx watch)
-pnpm dev
-
-# 4. build & run production
-pnpm build
-pnpm start
+# Smoke test
+curl http://127.0.0.1:8000/api/v1/health
+# → {"status":"ok","chain":"mainnet","blockNumber":0,"wsConnected":false}
 ```
 
-The server listens on `:8000` by default. Hit `GET /api/v1/health` to verify.
-
-## Scripts
-
-| Command | Purpose |
-|---|---|
-| `pnpm dev` | Run with hot-reload (tsx) |
-| `pnpm build` | Compile TypeScript to `dist/` |
-| `pnpm start` | Run the compiled `dist/server.js` |
-| `pnpm e2e:server` | Boot the offline stub server (no live RPC) for frontend integration tests |
-| `pnpm test` | Run the Vitest suite once |
-| `pnpm test:watch` | Watch-mode tests |
-| `pnpm test:coverage` | Generate v8 coverage report |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm lint` | ESLint with `@typescript-eslint` |
-
-## Run end-to-end (no mainnet RPC required)
-
-A one-shot smoke script at [`scripts/e2e-smoke.sh`](./scripts/e2e-smoke.sh)
-builds the backend, boots the offline stub on a free port, waits for
-`/api/v1/health`, runs the frontend HttpAPI integration suite, and
-tears the stub down — exit code reflects full pass/fail:
+### Alternative: `uv`
 
 ```bash
-./scripts/e2e-smoke.sh        # default port 8765
-PORT=9000 ./scripts/e2e-smoke.sh
+uv sync --extra dev
+uv run dtm-backend
 ```
-
-For interactive debugging you can also drive the two halves by hand:
-
-```bash
-# Terminal 1 — stub backend on :8765
-pnpm e2e:server
-
-# Terminal 2 — frontend integration tests
-cd ../frontend
-INTEGRATION_BACKEND_URL=http://127.0.0.1:8765 pnpm test:integration
-```
-
-For a real mainnet run, set `RPC_URL` in `.env` (defaults to
-`https://eth.llamarpc.com`) and use `pnpm dev` instead. The frontend's
-`HttpAPI` is the same in both modes — only the backend data source
-changes.
 
 ## Layout
 
 ```
-src/
-  config.ts     # env → typed config
-  logger.ts     # pino instance (pretty in dev)
-  errors.ts     # typed HTTP error helpers
-  server.ts     # Fastify bootstrap
-  routes/       # REST handlers (health, pools, transactions, positions, experiments)
-  chain/        # RPC provider + classification + address registry + V2/V3 read helpers
-  experiments/  # CPMM, sandwich, IL, attribution math (mirrors frontend algorithms)
-  ws/           # WebSocket topic hub + batcher (mempool_tx, liquidation_event, amm_sync)
-tests/
-  setup.ts                # vitest globals
-  helpers/                # buildTestApp, stubProvider
-  chain/, routes/, experiments/, ws/, integration/
+backend/
+├── pyproject.toml
+├── .env.example
+├── src/dtm_backend/
+│   ├── __init__.py
+│   ├── config.py        # pydantic-settings, env-driven
+│   ├── logger.py        # structlog JSON
+│   ├── main.py          # `dtm-backend` console script
+│   ├── server.py        # FastAPI factory + CORS + lifespan
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   └── health.py    # GET /api/v1/health
+│   └── scripts/
+│       ├── __init__.py
+│       └── e2e_server.py  # `dtm-e2e-server` console script
+└── tests/
+    ├── conftest.py
+    ├── config.test.py
+    ├── build_cors_options.test.py
+    └── integration/
+        └── smoke.test.py
 ```
 
-## REST API
+## Configuration
 
-Base path: `/api/v1`. All responses are JSON; bigints are encoded as decimal
-strings per spec §7. Errors use a uniform envelope:
+All settings come from environment variables (with a `.env` file
+in the working directory if present).  See [`.env.example`](./.env.example)
+for the full list.  Highlights:
 
-```json
-{ "error": { "code": "string", "message": "string", "details"?: {...} } }
+| Var | Default | Notes |
+| --- | --- | --- |
+| `PORT` | `8000` | uvicorn bind port |
+| `HOST` | `0.0.0.0` | uvicorn bind host |
+| `LOG_LEVEL` | `info` | `debug` / `info` / `warning` / `error` |
+| `RPC_URL` | `https://eth.llamarpc.com` | Ethereum mainnet by default |
+| `RPC_WS_URL` | *(unset)* | Optional WebSocket endpoint |
+| `CHAIN_ID` | `1` | Used to label `/api/v1/health` |
+| `CORS_ORIGINS` | `http://localhost:5173, http://127.0.0.1:5173` | Comma-separated allow-list |
+| `CORS_ALLOW_ALL` | `false` | Set to `true` to unlock `*` |
+| `CACHE_TTL_MS` | `5000` | Generic chain cache TTL |
+| `LIQUIDATION_POLL_MS` | `12000` | Aave V3 liquidation watcher poll |
+| `AMM_SYNC_POLL_MS` | `12000` | AMM sync watcher poll |
+
+## Tests
+
+```bash
+pytest                                          # everything
+pytest tests/ --ignore=tests/integration        # unit only
+pytest tests/integration/                       # integration only
+pytest --cov=src/dtm_backend --cov-report=term-missing
 ```
 
-| Method | Path | Description |
-|---|---|---|
-| `GET`  | `/health`              | Liveness probe |
-| `GET`  | `/pools`               | Curated 3-pool snapshot (V2 + V3 reserves / slot0) |
-| `GET`  | `/transactions`        | Recent on-chain txs (params: `blocks`, `limit`, `addresses`) |
-| `GET`  | `/lending-positions`   | Curated Aave V3 borrower positions |
-| `GET`  | `/lp-positions`        | Curated V3 NFT LP positions |
-| `GET`  | `/experiments`         | Experiment preset catalog |
-| `GET`  | `/experiments/:id`     | Single preset (404 on miss) |
-| `POST` | `/experiments/sandwich`    | Run sandwich simulation |
-| `POST` | `/experiments/il`          | Run IL calculation |
-| `POST` | `/experiments/attribution` | Run profit attribution |
+Coverage is configured in `pyproject.toml` to omit `main.py` and
+the `scripts/` package (those are entry points, not library
+code).  Per-glob thresholds will be added in Phase 5.
 
-## WebSocket
+## CORS
 
-Path: `/ws`. Subscribe by sending `{ "type": "subscribe", "topic": "..." }`
-where topic is one of `mempool_tx`, `liquidation_event`, `amm_sync`. Messages
-are batched and sent as JSON frames; see the design spec for the envelope.
+`server._build_cors_options()` translates `Config.cors_*` into
+`CORSMiddleware` kwargs.  Resolution rules (preserved from the
+previous TypeScript backend):
+
+- `CORS_ALLOW_ALL=true`        → `allow_origins=["*"]`
+- `*` in `CORS_ORIGINS`        → `allow_origins=["*"]`
+- otherwise                    → exact-match allow-list
+
+`allow_credentials` is always `False` (CORS spec forbids `*` with
+credentials).
+
+## License
+
+MIT.

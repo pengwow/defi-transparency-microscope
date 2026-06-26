@@ -2,11 +2,11 @@
 #
 # scripts/e2e-smoke.sh
 #
-# One-shot end-to-end smoke test:
-#   1. Builds the backend.
+# One-shot end-to-end smoke test (Python backend):
+#   1. Installs the Python backend in editable mode.
 #   2. Boots the offline e2e stub server on a free port.
-#   3. Waits for it to become ready.
-#   4. Runs the frontend HttpAPI integration suite against it.
+#   3. Waits for /api/v1/health to become reachable.
+#   4. Verifies the wire shape of /api/v1/health.
 #   5. Always tears the server down (success or failure).
 #
 # Usage:
@@ -14,6 +14,10 @@
 #   PORT=9000 ./scripts/e2e-smoke.sh   # override e2e port
 #
 # Exits 0 on full success, non-zero on any failure.
+#
+# Note: the frontend HttpAPI integration suite is wired in once the
+# chain layer and experiments land (Phase 2 / Phase 3).  Phase 1
+# only verifies the skeleton is reachable end-to-end.
 #
 set -euo pipefail
 
@@ -55,25 +59,43 @@ trap cleanup EXIT INT TERM
 
 # ─── Preflight checks ────────────────────────────────────────────────────
 [ -d "${REPO_ROOT}/backend" ] || die "backend/ not found at ${REPO_ROOT}"
-[ -d "${REPO_ROOT}/frontend" ] || die "frontend/ not found at ${REPO_ROOT}"
-command -v pnpm >/dev/null 2>&1 || die "pnpm not found in PATH"
-command -v node >/dev/null 2>&1 || die "node not found in PATH"
+command -v python3 >/dev/null 2>&1 || die "python3 not found in PATH"
+command -v python3.12 >/dev/null 2>&1 || warn "python3.12 not in PATH; will fall back to python3"
 
-# ─── Step 1: Build backend ───────────────────────────────────────────────
-log "building backend…"
+# Pick the right interpreter.  Plan targets 3.12, so we prefer it
+# when available, otherwise fall back to whatever `python3` resolves
+# to.  The pyproject.toml requires >=3.12,<3.15, so we bail out
+# hard if neither is acceptable.
+PY="${PY:-}"
+if command -v python3.12 >/dev/null 2>&1; then
+  PY="$(command -v python3.12)"
+elif command -v python3 >/dev/null 2>&1; then
+  PY="$(command -v python3)"
+else
+  die "no python interpreter found"
+fi
+log "using python: ${PY}"
+"${PY}" - <<'PY' || die "python ${PY} is outside the supported range (>=3.12,<3.15)"
+import sys
+if not (3, 12) <= sys.version_info < (3, 15):
+    sys.exit(1)
+PY
+
+# ─── Step 1: Install backend ─────────────────────────────────────────────
+log "installing backend (editable + dev extras)…"
 (
   cd "${REPO_ROOT}/backend"
-  pnpm install --frozen-lockfile
-  pnpm build
+  "${PY}" -m pip install --quiet --upgrade pip
+  "${PY}" -m pip install --quiet -e ".[dev]"
 )
-ok "backend built"
+ok "backend installed"
 
 # ─── Step 2: Start e2e stub ─────────────────────────────────────────────
 log "starting e2e stub on http://${HOST}:${PORT}…"
 (
   cd "${REPO_ROOT}/backend"
-  PORT="${PORT}" E2E_HOST="${HOST}" E2E_LOG_LEVEL=warn \
-    pnpm e2e:server > "${LOG_FILE}" 2>&1 &
+  E2E_HOST="${HOST}" E2E_PORT="${PORT}" E2E_LOG_LEVEL=warning \
+    "${PY}" -m dtm_backend.scripts.e2e_server > "${LOG_FILE}" 2>&1 &
   echo $! > /tmp/e2e-smoke-$$-pid
 )
 SERVER_PID="$(cat /tmp/e2e-smoke-$$-pid 2>/dev/null || echo "")"
@@ -102,39 +124,30 @@ done
   die "e2e stub failed to become ready within 30s"
 }
 
-# ─── Step 4: Run frontend integration tests ─────────────────────────────
-log "running frontend integration tests…"
-set +e
-(
-  cd "${REPO_ROOT}/frontend"
-  INTEGRATION_BACKEND_URL="http://${HOST}:${PORT}" pnpm test:integration
-)
-RC_FE=$?
-set -e
-if [ "${RC_FE}" -ne 0 ]; then
-  warn "frontend integration tests failed (rc=${RC_FE})"
-  warn "server log:"
-  sed 's/^/    /' "${LOG_FILE}" >&2 || true
-  exit "${RC_FE}"
+# ─── Step 4: Verify /api/v1/health wire shape ──────────────────────────
+log "verifying /api/v1/health wire shape…"
+HEALTH_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/health")"
+log "  → ${HEALTH_BODY}"
+EXPECTED='{"status":"ok","chain":"mainnet","blockNumber":0,"wsConnected":false}'
+if [ "${HEALTH_BODY}" != "${EXPECTED}" ]; then
+  warn "expected: ${EXPECTED}"
+  warn "got:      ${HEALTH_BODY}"
+  die "/api/v1/health did not return the expected wire shape"
 fi
-ok "frontend integration tests passed"
+ok "/api/v1/health shape OK"
 
-# ─── Step 4b: Run backend WS integration tests ─────────────────────────
-log "running backend WebSocket integration tests…"
-set +e
-(
-  cd "${REPO_ROOT}/backend"
-  INTEGRATION_BACKEND_URL="http://${HOST}:${PORT}" pnpm test:integration -- tests/integration/ws.test.ts
-)
-RC_BE=$?
-set -e
-if [ "${RC_BE}" -ne 0 ]; then
-  warn "backend WS integration tests failed (rc=${RC_BE})"
-  warn "server log:"
-  sed 's/^/    /' "${LOG_FILE}" >&2 || true
-  exit "${RC_BE}"
+# ─── Step 5: Verify CORS preflight ─────────────────────────────────────
+log "verifying CORS headers…"
+CORS_ORIGIN="$(curl -fsS -m 2 -D - -o /dev/null \
+  -H "Origin: http://localhost:5173" \
+  "http://${HOST}:${PORT}/api/v1/health" \
+  | tr -d '\r' \
+  | awk -F': ' 'tolower($1) == "access-control-allow-origin" { print $2; exit }')"
+if [ "${CORS_ORIGIN}" != "http://localhost:5173" ]; then
+  warn "got access-control-allow-origin: ${CORS_ORIGIN:-<missing>}"
+  die "CORS middleware did not respond with the expected allow-origin"
 fi
-ok "backend WebSocket integration tests passed"
+ok "CORS OK (allow-origin: ${CORS_ORIGIN})"
 
 # ─── Done ───────────────────────────────────────────────────────────────
 ok "e2e smoke OK  →  http://${HOST}:${PORT}"
