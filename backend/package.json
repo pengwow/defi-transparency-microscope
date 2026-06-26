@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "coverage:check": "tsx scripts/coverage-check.ts",
     "lint": "eslint . --ext .ts --report-unused-disable-directives",
     "format": "prettier --write \"src/**/*.{ts,css,md}\" \"tests/**/*.{ts,css,md}\"",
     "typecheck": "tsc --noEmit"

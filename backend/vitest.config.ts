@@ -16,7 +16,24 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
       include: ['src/**/*.ts'],
-      exclude: ['src/server.ts', 'src/types.ts'],
+      // Exclude pure data / type-only files from coverage.
+      exclude: [
+        'src/server.ts', // bootstrapped only in production; covered by e2e
+        'src/types.ts', // type-only
+        'src/chain/types.ts', // type-only
+        'src/experiments/types.ts', // type-only
+        'src/logger.ts', // singleton; no logic to test
+        'src/config.ts', // env parsing; covered indirectly
+      ],
+      // Global floor. Per-glob targets (chain ≥80%, experiments ≥90%,
+      // routes ≥70%) are asserted by `pnpm coverage:check` after the
+      // run, since vitest's threshold keys are not glob-aware.
+      thresholds: {
+        lines: 80,
+        statements: 80,
+        functions: 80,
+        branches: 70,
+      },
     },
   },
 });
