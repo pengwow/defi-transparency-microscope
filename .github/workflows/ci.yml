@@ -1,0 +1,158 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs of the same ref so a fast follow-up commit
+# doesn't queue behind a slow prior run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 9
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────
+  # Backend unit tests
+  # ──────────────────────────────────────────────────────────────────
+  backend-unit:
+    name: backend · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: backend
+      - run: pnpm typecheck
+        working-directory: backend
+      - run: pnpm lint
+        working-directory: backend
+      - run: pnpm test
+        working-directory: backend
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────
+  # Frontend unit tests (excludes the *.integration.test.ts files)
+  # ──────────────────────────────────────────────────────────────────
+  frontend-unit:
+    name: frontend · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm typecheck
+        working-directory: frontend
+      - run: pnpm lint
+        working-directory: frontend
+      - run: pnpm test
+        working-directory: frontend
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────
+  # End-to-end: build backend, boot the offline stub on :8765, run the
+  # frontend HttpAPI integration suite against it. No public RPC.
+  # ──────────────────────────────────────────────────────────────────
+  e2e:
+    name: e2e · frontend × backend (offline stub)
+    runs-on: ubuntu-latest
+    needs: [backend-unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: backend
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - name: Build backend
+        run: pnpm build
+        working-directory: backend
+      - name: Start e2e stub server
+        run: |
+          pnpm e2e:server > /tmp/e2e-server.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS -m 1 http://127.0.0.1:8765/api/v1/health >/dev/null 2>&1; then
+              echo "e2e stub ready after ${i} ticks"
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "e2e stub failed to start in 30s"
+          cat /tmp/e2e-server.log
+          exit 1
+      - name: Run frontend integration tests
+        env:
+          INTEGRATION_BACKEND_URL: http://127.0.0.1:8765
+        run: pnpm test:integration
+        working-directory: frontend
+      - name: Dump server log on failure
+        if: failure()
+        run: cat /tmp/e2e-server.log
+      - name: Stop e2e stub
+        if: always()
+        run: pkill -f e2e-server || true
+
+  # ──────────────────────────────────────────────────────────────────
+  # Frontend production build (with VITE_USE_BACKEND=true to catch
+  # import / tree-shaking issues that the unit suite can miss).
+  # ──────────────────────────────────────────────────────────────────
+  frontend-build:
+    name: frontend · build (VITE_USE_BACKEND=true)
+    runs-on: ubuntu-latest
+    needs: [frontend-unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - name: Build with backend env vars
+        env:
+          VITE_USE_BACKEND: 'true'
+          VITE_BACKEND_URL: http://127.0.0.1:8765
+        run: pnpm build
+        working-directory: frontend
+      - name: Upload build artefact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
