@@ -4,6 +4,14 @@ DeFi Transparency Microscope — Node.js + Fastify backend service.
 
 See [`docs/superpowers/specs/2026-06-25-dtm-backend-design.md`](../docs/superpowers/specs/2026-06-25-dtm-backend-design.md) for the full design.
 
+## API contract
+
+The REST surface (9 endpoints under `/api/v1` + `/api/v1/health`) is
+documented in machine-readable form at [`openapi.yaml`](./openapi.yaml).
+The WebSocket feed (`GET /ws`) is intentionally outside the OpenAPI
+document; its protocol is defined in `src/ws/topics.ts` and
+`src/ws/routes.ts`.
+
 ## Quick start
 
 ```bash
