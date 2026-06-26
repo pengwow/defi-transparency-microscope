@@ -21,6 +21,8 @@ from dtm_backend.routes import lending as lending_route
 from dtm_backend.routes import lp as lp_route
 from dtm_backend.routes import pools as pools_route
 from dtm_backend.routes import transactions as transactions_route
+from dtm_backend.routes import ws as ws_route
+from dtm_backend.ws.hub import WSHub
 
 log = structlog.get_logger(__name__)
 
@@ -66,15 +68,22 @@ def _build_cors_options(config: Config) -> CorsOptions:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Boot/shutdown hook — wired by `create_app`.
 
-    Phase 1 has no async resources to manage, so this is a
-    placeholder.  Later phases will start/stop the WS hub, the
-    chain provider, the mempool source, and the watchers.
+    Phase 4 installs a default `WSHub` (if the caller didn't
+    provide one via `app.state.ws_hub`) and starts its
+    heartbeat.  Later phases will add the chain provider,
+    mempool source, and watchers.
     """
     log.info("server.startup", port=app.state.config.port)
+    hub: WSHub | None = getattr(app.state, "ws_hub", None)
+    if hub is None:
+        hub = WSHub(heartbeat_interval_s=30.0)
+        app.state.ws_hub = hub
+    hub.start_heartbeat()
     try:
         yield
     finally:
         log.info("server.shutdown")
+        await hub.stop_heartbeat()
 
 
 def create_app(config: Config | None = None) -> FastAPI:
@@ -112,13 +121,14 @@ def create_app(config: Config | None = None) -> FastAPI:
     # surface (`/experiments`, `/experiments/{id}`,
     # `/experiments/sandwich`, `/experiments/il`,
     # `/experiments/attribution`).  Phase 4 appends the `/ws`
-    # WebSocket route.
+    # WebSocket route (no prefix; the hub is global).
     app.include_router(health_route.router, prefix="/api/v1")
     app.include_router(pools_route.router, prefix="/api/v1")
     app.include_router(transactions_route.router, prefix="/api/v1")
     app.include_router(lending_route.router, prefix="/api/v1")
     app.include_router(lp_route.router, prefix="/api/v1")
     app.include_router(experiments_route.router, prefix="/api/v1")
+    app.include_router(ws_route.router)
 
     return app
 
