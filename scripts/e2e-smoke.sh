@@ -12,8 +12,14 @@
 #        - GET /api/v1/transactions
 #        - GET /api/v1/lending-positions
 #        - GET /api/v1/lp-positions
-#   5. Verifies CORS headers on /api/v1/health.
-#   6. Always tears the server down (success or failure).
+#   5. Verifies the wire shape of every Phase 3 experiment endpoint:
+#        - GET  /api/v1/experiments
+#        - GET  /api/v1/experiments/{id}
+#        - POST /api/v1/experiments/sandwich
+#        - POST /api/v1/experiments/il
+#        - POST /api/v1/experiments/attribution
+#   6. Verifies CORS headers on /api/v1/health.
+#   7. Always tears the server down (success or failure).
 #
 # Usage:
 #   ./scripts/e2e-smoke.sh
@@ -245,7 +251,109 @@ print('lp ok')
 fi
 ok "/api/v1/lp-positions shape OK"
 
-# ─── Step 9: Verify CORS preflight ─────────────────────────────────────
+# ─── Step 9: Verify /api/v1/experiments wire shape ───────────────────
+log "verifying /api/v1/experiments wire shape…"
+EXPERIMENTS_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/experiments")"
+log "  → $(printf '%s' "${EXPERIMENTS_BODY}" | head -c 120)…"
+if ! printf '%s' "${EXPERIMENTS_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body, list), f'expected list, got {type(body).__name__}'
+assert len(body) == 4, f'expected 4 presets, got {len(body)}'
+for p in body:
+    assert isinstance(p.get('id'), str) and p['id'], 'id must be a non-empty string'
+    assert isinstance(p.get('name'), str) and p['name'], 'name must be a non-empty string'
+    cfg = p.get('config', {})
+    assert cfg.get('protocol') in ('uniswap_v2', 'uniswap_v3'), 'protocol must be v2 or v3'
+    assert isinstance(cfg.get('reserve0'), str) and cfg['reserve0'].isdigit(), 'reserve0 must be a decimal string'
+    assert isinstance(cfg.get('reserve1'), str) and cfg['reserve1'].isdigit(), 'reserve1 must be a decimal string'
+    assert isinstance(cfg.get('fee'), int), 'fee must be an int'
+    assert isinstance(cfg.get('runs'), int), 'runs must be an int'
+print('experiments ok')
+"; then
+  warn "got: ${EXPERIMENTS_BODY}"
+  die "/api/v1/experiments did not return the expected wire shape"
+fi
+ok "/api/v1/experiments shape OK"
+
+# ─── Step 10: Verify /api/v1/experiments/{id} lookup + 404 ───────────
+log "verifying /api/v1/experiments/{id}…"
+EXPERIMENT_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/experiments/sandwich-v2-usdc-weth")"
+if [ "$(printf '%s' "${EXPERIMENT_BODY}" | "${PY}" -c 'import json,sys;print(json.load(sys.stdin)["id"])')" != "sandwich-v2-usdc-weth" ]; then
+  warn "got: ${EXPERIMENT_BODY}"
+  die "/api/v1/experiments/{id} did not return the expected id"
+fi
+EXPERIMENT_STATUS="$(curl -s -o /dev/null -w '%{http_code}' -m 2 "http://${HOST}:${PORT}/api/v1/experiments/does-not-exist")"
+if [ "${EXPERIMENT_STATUS}" != "404" ]; then
+  die "expected 404 for unknown experiment id, got ${EXPERIMENT_STATUS}"
+fi
+ok "/api/v1/experiments/{id} OK (404 on unknown)"
+
+# ─── Step 11: Verify /api/v1/experiments/sandwich ────────────────────
+log "verifying /api/v1/experiments/sandwich…"
+SANDWICH_BODY="$(curl -fsS -m 2 -X POST -H 'Content-Type: application/json' \
+  -d "{\"reserve0\":\"$((80 * 10**18))\",\"reserve1\":\"$((160 * 10**24))\",\"victimAmountIn\":\"$((1 * 10**18))\",\"attackerAmountIn\":\"$((1 * 10**17))\",\"fee\":3000}" \
+  "http://${HOST}:${PORT}/api/v1/experiments/sandwich")"
+log "  → $(printf '%s' "${SANDWICH_BODY}" | head -c 120)…"
+if ! printf '%s' "${SANDWICH_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body.get('durationMs'), int), 'durationMs must be an int'
+assert body['durationMs'] >= 0, 'durationMs must be non-negative'
+res = body.get('result', {})
+assert isinstance(res.get('attackerProfit'), str), 'attackerProfit must be a string'
+assert isinstance(res.get('victimLoss'), str), 'victimLoss must be a string'
+assert res['attackerProfit'].lstrip('-').isdigit(), 'attackerProfit must be a decimal string'
+assert res['victimLoss'].lstrip('-').isdigit(), 'victimLoss must be a decimal string'
+print('sandwich ok')
+"; then
+  warn "got: ${SANDWICH_BODY}"
+  die "/api/v1/experiments/sandwich did not return the expected wire shape"
+fi
+ok "/api/v1/experiments/sandwich OK"
+
+# ─── Step 12: Verify /api/v1/experiments/il ──────────────────────────
+log "verifying /api/v1/experiments/il…"
+IL_BODY="$(curl -fsS -m 2 -X POST -H 'Content-Type: application/json' \
+  -d '{"priceRatio":2.0,"variant":"v2"}' \
+  "http://${HOST}:${PORT}/api/v1/experiments/il")"
+log "  → $(printf '%s' "${IL_BODY}" | head -c 120)…"
+if ! printf '%s' "${IL_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body.get('durationMs'), int), 'durationMs must be an int'
+res = body.get('result', {})
+assert res.get('variant') == 'v2', f'expected variant=v2, got {res.get(\"variant\")}'
+assert abs(res.get('il', 0) - (-0.0572)) < 1e-3, f'expected il≈-0.0572, got {res.get(\"il\")}'
+assert res.get('priceRatio') == 2.0, 'priceRatio must echo the input'
+print('il ok')
+"; then
+  warn "got: ${IL_BODY}"
+  die "/api/v1/experiments/il did not return the expected wire shape"
+fi
+ok "/api/v1/experiments/il OK"
+
+# ─── Step 13: Verify /api/v1/experiments/attribution ─────────────────
+log "verifying /api/v1/experiments/attribution…"
+ATTRIB_BODY="$(curl -fsS -m 2 -X POST -H 'Content-Type: application/json' \
+  -d "{\"reserve0\":\"$((80 * 10**18))\",\"reserve1\":\"$((160 * 10**24))\",\"amountIn\":\"$((1 * 10**18))\",\"fee\":3000,\"priceRatio\":1.5,\"fees\":\"$((1 * 10**18))\",\"rebates\":\"$((5 * 10**17))\"}" \
+  "http://${HOST}:${PORT}/api/v1/experiments/attribution")"
+log "  → $(printf '%s' "${ATTRIB_BODY}" | head -c 120)…"
+if ! printf '%s' "${ATTRIB_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body.get('durationMs'), int), 'durationMs must be an int'
+res = body.get('result', {})
+assert isinstance(res.get('netPnl'), str), 'netPnl must be a string'
+assert res['netPnl'].lstrip('-').isdigit(), 'netPnl must be a decimal string'
+print('attribution ok')
+"; then
+  warn "got: ${ATTRIB_BODY}"
+  die "/api/v1/experiments/attribution did not return the expected wire shape"
+fi
+ok "/api/v1/experiments/attribution OK"
+
+# ─── Step 14: Verify CORS preflight ─────────────────────────────────
 log "verifying CORS headers…"
 CORS_ORIGIN="$(curl -fsS -m 2 -D - -o /dev/null \
   -H "Origin: http://localhost:5173" \

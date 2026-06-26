@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from dtm_backend.config import Config, load_config
+from dtm_backend.routes import experiments as experiments_route
 from dtm_backend.routes import health as health_route
 from dtm_backend.routes import lending as lending_route
 from dtm_backend.routes import lp as lp_route
@@ -107,13 +108,17 @@ def create_app(config: Config | None = None) -> FastAPI:
     )
 
     # Routes — currently `/api/v1/health`, `/pools`, `/transactions`,
-    # `/lending-positions`, `/lp-positions`.  Phase 4 appends the
-    # `/ws` WebSocket route.
+    # `/lending-positions`, `/lp-positions`, plus the experiments
+    # surface (`/experiments`, `/experiments/{id}`,
+    # `/experiments/sandwich`, `/experiments/il`,
+    # `/experiments/attribution`).  Phase 4 appends the `/ws`
+    # WebSocket route.
     app.include_router(health_route.router, prefix="/api/v1")
     app.include_router(pools_route.router, prefix="/api/v1")
     app.include_router(transactions_route.router, prefix="/api/v1")
     app.include_router(lending_route.router, prefix="/api/v1")
     app.include_router(lp_route.router, prefix="/api/v1")
+    app.include_router(experiments_route.router, prefix="/api/v1")
 
     return app
 
