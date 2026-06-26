@@ -4,6 +4,7 @@ This is the entry point used by both `uvicorn` and the offline
 e2e stub.  The application surface grows as the project moves
 through phases 1-5; this file owns only the wire-up.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence

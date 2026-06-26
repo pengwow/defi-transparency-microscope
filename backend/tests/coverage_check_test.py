@@ -10,6 +10,7 @@ Thresholds (per the Phase 5 plan):
   - experiments/ >= 90%
   - routes/      >= 70%
 """
+
 from __future__ import annotations
 
 import json
@@ -41,7 +42,9 @@ def _write_coverage(tmp_path: Path, files: dict[str, dict]) -> Path:
     return coverage_path
 
 
-def _run(tmp_path: Path, coverage_path: Path, thresholds: dict[str, float]) -> subprocess.CompletedProcess[str]:
+def _run(
+    tmp_path: Path, coverage_path: Path, thresholds: dict[str, float]
+) -> subprocess.CompletedProcess[str]:
     """Invoke the script with the given coverage file and thresholds."""
     args = [
         sys.executable,
@@ -85,9 +88,9 @@ def test_script_passes_when_all_glob_thresholds_met(tmp_path: Path) -> None:
     }
     cov = _write_coverage(tmp_path, files)
     result = _run(tmp_path, cov, {"chain": 80.0, "experiments": 90.0, "routes": 70.0})
-    assert result.returncode == 0, (
-        f"expected 0, got {result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
-    )
+    assert (
+        result.returncode == 0
+    ), f"expected 0, got {result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
     assert "FAIL" not in result.stdout
 
 
@@ -193,6 +196,8 @@ def test_script_prints_per_glob_summary(tmp_path: Path) -> None:
 
 def test_script_fails_when_coverage_file_missing(tmp_path: Path) -> None:
     """A missing `coverage.json` exits 1 with a clear error."""
-    result = _run(tmp_path, tmp_path / "missing.json", {"chain": 80.0, "experiments": 90.0, "routes": 70.0})
+    result = _run(
+        tmp_path, tmp_path / "missing.json", {"chain": 80.0, "experiments": 90.0, "routes": 70.0}
+    )
     assert result.returncode == 1
     assert "missing" in result.stderr.lower() or "not found" in result.stderr.lower()

@@ -20,6 +20,7 @@ The handlers are installed by `register_exception_handlers(app)`,
 which is called by `create_app`.  We build a real `FastAPI` app
 per test so the ASGI middleware stack is authentic.
 """
+
 from __future__ import annotations
 
 import json

@@ -21,6 +21,7 @@ fires inside a route:
 | `UpstreamUnreachable`    | 502  | `upstream_unreachable`|
 | any other `Exception`    | 500  | `internal`           |
 """
+
 from __future__ import annotations
 
 import structlog
@@ -72,9 +73,7 @@ def _envelope(
     return body
 
 
-async def _http_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def _http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Map `HTTPException` to the envelope, branching on the status code.
 
     4xx errors are mapped to a stable `error` code when possible
@@ -92,9 +91,7 @@ async def _http_exception_handler(
     return JSONResponse(status_code=status_code, content=_envelope(code, message))
 
 
-async def _validation_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def _validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Map a `RequestValidationError` to a `validation` envelope with
     `details.errors` matching the FastAPI default shape (so existing
     frontend decoders that only read `message` keep working)."""
@@ -109,9 +106,7 @@ async def _validation_exception_handler(
     )
 
 
-async def _upstream_unreachable_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def _upstream_unreachable_handler(request: Request, exc: Exception) -> JSONResponse:
     """Map `UpstreamUnreachable` to a 502 with source details."""
     assert isinstance(exc, UpstreamUnreachable)
     return JSONResponse(
@@ -124,9 +119,7 @@ async def _upstream_unreachable_handler(
     )
 
 
-async def _unhandled_exception_handler(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Last-resort handler for any unhandled exception.
 
     We log the full traceback server-side but return a generic

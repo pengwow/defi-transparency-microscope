@@ -14,6 +14,7 @@ and `wsConnected` is sourced from the live `WSHub.is_connected()`
 (Phase 4).  The route never raises — degraded states return
 `status: "degraded"` rather than 5xx.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Request

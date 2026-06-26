@@ -8,6 +8,7 @@ The route must:
 * always serialise the four keys `status`, `chain`,
   `blockNumber`, `wsConnected` in the canonical order
 """
+
 from __future__ import annotations
 
 import httpx

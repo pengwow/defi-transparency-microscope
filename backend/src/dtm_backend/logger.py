@@ -4,6 +4,7 @@ We use structlog to keep the same shape as the previous
 `pino`-based Fastify backend: JSON to stdout, one line per log
 record, with `level` / `time` / `service` fields.
 """
+
 from __future__ import annotations
 
 import logging
