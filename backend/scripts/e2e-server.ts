@@ -261,6 +261,11 @@ async function main(): Promise<void> {
     ammSyncPollMs: 60_000,
     ammSyncLookback: 5,
     ammSyncDebounceMs: 50,
+    // E2E runs on localhost; the Vite dev server (5173) and the
+    // Node-side smoke harness both need to hit it.  Use the dev
+    // defaults rather than `*` so the assertions match prod paths.
+    corsOrigins: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    corsAllowAll: false,
   };
   const app = await buildServer({ config, provider });
   // Suppress unused-import lint: TOKENS is referenced so the curated

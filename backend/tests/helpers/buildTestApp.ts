@@ -42,6 +42,10 @@ export async function buildTestApp(opts: BuildTestAppOptions = {}): Promise<Buil
     ammSyncPollMs: 1000,
     ammSyncLookback: 10,
     ammSyncDebounceMs: 50,
+    // Tests don't need CORS gating; default to permissive wildcard so
+    // route assertions are free of preflight noise.
+    corsOrigins: ['*'],
+    corsAllowAll: true,
   };
   const app = await buildServer({ config, provider, wsHealth, ...(opts.server ?? {}) });
   await app.ready();

@@ -70,11 +70,60 @@ export interface BuildServerOptions {
    * `MempoolSource` from it.
    */
   mempoolTransport?: MempoolTransport | null;
+  /**
+   * Optional override for the CORS allow-list. When omitted, the
+   * list is read from `config.corsOrigins` / `config.corsAllowAll`.
+   * Tests pass a permissive list (e.g. `['*']`) to keep assertions
+   * about route payloads free of CORS noise.
+   */
+  corsOriginsOverride?: string[];
+  /** Optional override for the CORS `*` flag. */
+  corsAllowAllOverride?: boolean;
 }
 
 const DEFAULT_WS_HEALTH: { isWebSocketConnected(): boolean } = {
   isWebSocketConnected: () => false,
 };
+
+/**
+ * Build the `@fastify/cors` options block.
+ *
+ * Resolution order:
+ *   1. Apply `corsOriginsOverride` if supplied; otherwise use
+ *      `config.corsOrigins`.
+ *   2. If the resolved allow-list contains the literal `*` — OR
+ *      `corsAllowAllOverride` / `config.corsAllowAll` is explicitly
+ *      `true` — emit a wildcard response.  The `*` response is
+ *      always paired with `credentials: false` (CORS spec).
+ *   3. Otherwise the resolved list is passed verbatim as an exact
+ *      match allow-list; `@fastify/cors` echoes the matching origin
+ *      back in `Access-Control-Allow-Origin`.
+ */
+export function buildCorsOptions(
+  config: Config,
+  originsOverride?: string[],
+  allowAllOverride?: boolean,
+): { origin: string | string[]; credentials: boolean; methods: string[] } {
+  const origins = originsOverride ?? config.corsOrigins;
+  const allowAll =
+    allowAllOverride === true ||
+    (allowAllOverride === undefined && config.corsAllowAll) ||
+    origins.includes('*');
+  if (allowAll) {
+    return {
+      origin: '*',
+      // `*` is incompatible with `credentials: true` per the CORS spec;
+      // match the historical `origin: true` behaviour by disabling it.
+      credentials: false,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    };
+  }
+  return {
+    origin: origins,
+    credentials: false,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  };
+}
 
 /**
  * Custom JSON serializer that converts BigInt to decimal strings.
@@ -160,7 +209,7 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
     void reply.status(404).send({ error: 'not_found', message: 'route not found' });
   });
 
-  await app.register(cors, { origin: true });
+  await app.register(cors, buildCorsOptions(config, opts.corsOriginsOverride, opts.corsAllowAllOverride));
   // @fastify/websocket is registered here (vs the route file) so the
   // hub is available to the route plugin via the app decorator.
   await app.register(websocket);
