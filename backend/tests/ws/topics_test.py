@@ -4,6 +4,7 @@ Phase 4 wire-protocol surface — the WSTopic enum + the
 discriminated WSMessage union.  These tests pin the *outgoing*
 shape (server → client) the frontend `WsClient` consumes.
 """
+
 from __future__ import annotations
 
 import pytest

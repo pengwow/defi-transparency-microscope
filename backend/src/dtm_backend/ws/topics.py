@@ -12,6 +12,7 @@ Layer rules
 * HTTP code (FastAPI) is *not* allowed in this file.
 * Pydantic is the only validation library used.
 """
+
 from __future__ import annotations
 
 from enum import Enum

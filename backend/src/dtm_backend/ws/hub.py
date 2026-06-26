@@ -14,6 +14,7 @@ connection subscribed to the topic, dropping the message on a
 full per-connection queue (so a stuck client can't head-of-line
 block the rest).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -78,7 +79,9 @@ class Connection:
     """
 
     ws: WSLike
-    queue: asyncio.Queue[str] = field(default_factory=lambda: asyncio.Queue(maxsize=_DEFAULT_QUEUE_SIZE))
+    queue: asyncio.Queue[str] = field(
+        default_factory=lambda: asyncio.Queue(maxsize=_DEFAULT_QUEUE_SIZE)
+    )
     topics: set[str] = field(default_factory=set)
     tasks: list[asyncio.Task[None]] = field(default_factory=list)
     closed: bool = False
@@ -199,7 +202,7 @@ class WSHub:
                 if self._enqueue_nowait(conn, msg):
                     delivered += 1
         if delivered == 0:
-            log.debug("ws.broadcast.no_subscribers", topic=topic_value)
+            log.debug("ws.broadcast.no_subscribers topic=%s", topic_value)
 
     # ── introspection ──────────────────────────────────────────────
 
@@ -238,7 +241,7 @@ class WSHub:
             conn.queue.put_nowait(msg.to_json())
             return True
         except asyncio.QueueFull:
-            log.warning("ws.queue_full", conn_id=id(conn))
+            log.warning("ws.queue_full conn_id=%d", id(conn))
             return False
 
     async def _enqueue(self, conn: Connection, msg: WSMessage) -> None:
@@ -266,7 +269,7 @@ class WSHub:
             try:
                 await conn.ws.send_text(data)
             except Exception as exc:
-                log.warning("ws.send_failed", conn_id=id(conn), error=str(exc))
+                log.warning("ws.send_failed conn_id=%d error=%s", id(conn), exc)
                 conn.closed = True
                 return
 
@@ -280,7 +283,7 @@ class WSHub:
                 except asyncio.CancelledError:
                     return
                 except Exception as exc:
-                    log.info("ws.disconnect", conn_id=id(conn), error=str(exc))
+                    log.info("ws.disconnect conn_id=%d error=%s", id(conn), exc)
                     return
                 # Tolerate a malformed frame: send an `error` envelope
                 # and keep the connection alive.

@@ -6,13 +6,13 @@ exercising the wire protocol the frontend's `WsClient`
 implements.  All five scenarios live in a single test file
 because they share the same server fixture.
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
 from collections.abc import AsyncIterator
 
-import httpx
 import pytest
 import websockets
 

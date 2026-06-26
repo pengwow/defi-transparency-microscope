@@ -10,6 +10,7 @@ outside the WebSocket) is exercised by the integration suite
 (`tests/integration/ws_test.py`); this file covers the
 synchronous request/response surface.
 """
+
 from __future__ import annotations
 
 import json

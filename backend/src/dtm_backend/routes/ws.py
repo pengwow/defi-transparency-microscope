@@ -13,6 +13,7 @@ The watchers (`chain/amm_sync_watcher.py`,
 into the hub via `broadcast()` — they do not interact with
 this route directly.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, WebSocket

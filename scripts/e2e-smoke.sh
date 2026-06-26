@@ -366,6 +366,42 @@ if [ "${CORS_ORIGIN}" != "http://localhost:5173" ]; then
 fi
 ok "CORS OK (allow-origin: ${CORS_ORIGIN})"
 
+# ─── Step 15: Verify /ws handshake + welcome + subscribe ────────────
+# Phase 4 adds the WebSocket hub.  We boot a tiny in-process WS
+# client (the same library the frontend ships) and verify the
+# wire format the frontend `WsClient` consumes: the very first
+# envelope must be `{ "type": "welcome" }`, and a `subscribe`
+# action must yield a `subscribed` ack with the same topic list.
+log "verifying /ws wire format…"
+if ! "${PY}" -c "
+import asyncio, json, sys
+import websockets
+
+async def main() -> int:
+    url = 'ws://${HOST}:${PORT}/ws'
+    async with websockets.connect(url, origin='http://localhost:5173') as ws:
+        first = json.loads(await asyncio.wait_for(ws.recv(), timeout=2.0))
+        if first != {'type': 'welcome'}:
+            print(f'expected welcome, got {first}', file=sys.stderr)
+            return 1
+        await ws.send(json.dumps({'action': 'subscribe', 'topics': ['mempool']}))
+        reply = json.loads(await asyncio.wait_for(ws.recv(), timeout=2.0))
+        if reply != {'type': 'subscribed', 'topics': ['mempool']}:
+            print(f'expected subscribed, got {reply}', file=sys.stderr)
+            return 1
+        await ws.send('not json')
+        err = json.loads(await asyncio.wait_for(ws.recv(), timeout=2.0))
+        if err.get('type') != 'error':
+            print(f'expected error, got {err}', file=sys.stderr)
+            return 1
+    return 0
+
+sys.exit(asyncio.run(main()))
+"; then
+  die "/ws endpoint did not return the expected wire format"
+fi
+ok "/ws welcome + subscribe + error envelopes OK"
+
 # ─── Done ───────────────────────────────────────────────────────────────
 ok "e2e smoke OK  →  http://${HOST}:${PORT}"
 exit 0

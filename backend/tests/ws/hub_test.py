@@ -6,6 +6,7 @@ implementation so the tests don't need a live server; the
 integration suite (`tests/integration/ws_test.py`) is the
 end-to-end check against FastAPI's real WebSocket transport.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -81,14 +82,19 @@ def _hub() -> WSHub:
     return WSHub(heartbeat_interval_s=0.0)
 
 
-async def _wait_for(predicate: Callable[[], bool], *, timeout: float = 1.0) -> None:
-    """Poll `predicate` until it returns True or `timeout` elapses."""
-    deadline = asyncio.get_event_loop().time() + timeout
-    while asyncio.get_event_loop().time() < deadline:
-        if predicate():
-            return
-        await asyncio.sleep(0.01)
-    raise AssertionError(f"predicate did not become true within {timeout}s")
+async def _wait_for(predicate: Callable[[], bool], *, timeout: float = 1.0) -> None:  # noqa: ASYNC109
+    """Poll `predicate` until it returns True or `timeout` elapses.
+
+    Test helper — `asyncio.timeout` raises on expiry, so we
+    catch the `TimeoutError` and convert it into the
+    assertion error the caller wants.
+    """
+    try:
+        async with asyncio.timeout(timeout):
+            while not predicate():  # noqa: ASYNC110
+                await asyncio.sleep(0.01)
+    except TimeoutError as exc:
+        raise AssertionError(f"predicate did not become true within {timeout}s") from exc
 
 
 def _enqueue_then_disconnect(ws: FakeWebSocket, payloads: list[str]) -> None:
@@ -308,7 +314,13 @@ async def test_broadcast_drops_slow_consumer() -> None:
         # — the hub returns immediately.
         payloads = [
             WSMessage.mempool_tx(
-                {"hash": "0x" + h * 64, "to": "0x01", "source": "0x02", "amount": "1", "gasPrice": "1"}
+                {
+                    "hash": "0x" + h * 64,
+                    "to": "0x01",
+                    "source": "0x02",
+                    "amount": "1",
+                    "gasPrice": "1",
+                }
             )
             for h in "abcdefghijkl"
         ]

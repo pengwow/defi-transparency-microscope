@@ -7,6 +7,7 @@ for incoming actions (client → server).  The hub in
 FastAPI — keeping the boundary clean lets the integration
 tests drive the hub with a fake `WebSocket`.
 """
+
 from __future__ import annotations
 
 from dtm_backend.ws.topics import (
