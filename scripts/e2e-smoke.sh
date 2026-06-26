@@ -109,15 +109,32 @@ set +e
   cd "${REPO_ROOT}/frontend"
   INTEGRATION_BACKEND_URL="http://${HOST}:${PORT}" pnpm test:integration
 )
-RC=$?
+RC_FE=$?
 set -e
-if [ "${RC}" -ne 0 ]; then
-  warn "frontend tests failed (rc=${RC})"
+if [ "${RC_FE}" -ne 0 ]; then
+  warn "frontend integration tests failed (rc=${RC_FE})"
   warn "server log:"
   sed 's/^/    /' "${LOG_FILE}" >&2 || true
-  exit "${RC}"
+  exit "${RC_FE}"
 fi
 ok "frontend integration tests passed"
+
+# ─── Step 4b: Run backend WS integration tests ─────────────────────────
+log "running backend WebSocket integration tests…"
+set +e
+(
+  cd "${REPO_ROOT}/backend"
+  INTEGRATION_BACKEND_URL="http://${HOST}:${PORT}" pnpm test:integration -- tests/integration/ws.test.ts
+)
+RC_BE=$?
+set -e
+if [ "${RC_BE}" -ne 0 ]; then
+  warn "backend WS integration tests failed (rc=${RC_BE})"
+  warn "server log:"
+  sed 's/^/    /' "${LOG_FILE}" >&2 || true
+  exit "${RC_BE}"
+fi
+ok "backend WebSocket integration tests passed"
 
 # ─── Done ───────────────────────────────────────────────────────────────
 ok "e2e smoke OK  →  http://${HOST}:${PORT}"
