@@ -6,9 +6,18 @@
 
 ## Status
 
-**Phase 1 — skeleton.** Only the `GET /api/v1/health` route is
-mounted.  The chain layer, REST routes, and WebSocket hub land in
-later phases — see [docs/superpowers/plans/2026-06-26-dtm-backend-python.md](../docs/superpowers/plans/2026-06-26-dtm-backend-python.md).
+All five planned phases are landed:
+
+| Phase | Surface | Endpoints / behaviour |
+| --- | --- | --- |
+| 1 | Skeleton + CORS | `GET /api/v1/health` |
+| 2 | Chain data | `/pools`, `/transactions`, `/lending-positions`, `/lp-positions` |
+| 3 | Experiments | `/experiments`, `/experiments/{id}`, `/experiments/sandwich`, `/experiments/il`, `/experiments/attribution` |
+| 4 | WebSocket hub | `GET /ws` + `mempool` / `amm_sync` / `liquidation` watchers |
+| 5 | Polish | error envelope, coverage gates, CI |
+
+See [docs/superpowers/plans/2026-06-26-dtm-backend-python.md](../docs/superpowers/plans/2026-06-26-dtm-backend-python.md)
+for the original plan.
 
 ## Quick start
 
@@ -42,22 +51,71 @@ backend/
 ├── src/dtm_backend/
 │   ├── __init__.py
 │   ├── config.py        # pydantic-settings, env-driven
+│   ├── errors.py        # ErrorResponse + global exception handlers
 │   ├── logger.py        # structlog JSON
 │   ├── main.py          # `dtm-backend` console script
-│   ├── server.py        # FastAPI factory + CORS + lifespan
-│   ├── routes/
-│   │   ├── __init__.py
-│   │   └── health.py    # GET /api/v1/health
-│   └── scripts/
-│       ├── __init__.py
-│       └── e2e_server.py  # `dtm-e2e-server` console script
-└── tests/
-    ├── conftest.py
-    ├── config.test.py
-    ├── build_cors_options.test.py
-    └── integration/
-        └── smoke.test.py
+│   ├── server.py        # FastAPI factory + CORS + lifespan + handlers
+│   ├── chain/           # web3.py adapters, ABI registry, classification
+│   ├── experiments/     # pure-math sandwich / IL / attribution
+│   ├── routes/          # HTTP endpoints (one module per resource)
+│   ├── scripts/         # e2e stub server
+│   ├── watchers/        # AsyncIterator[T] -> WS broadcast loops
+│   └── ws/              # WSHub, WSTopic, WSMessage union
+└── tests/               # mirror the src/ tree, one file per module
 ```
+
+## HTTP API
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET`  | `/api/v1/health` | Liveness; reports `wsConnected` from the live hub. |
+| `GET`  | `/api/v1/pools` | V2 + V3 pools. |
+| `GET`  | `/api/v1/transactions` | Mempool + mined txs (typed). |
+| `GET`  | `/api/v1/lending-positions` | Aave V3 positions. |
+| `GET`  | `/api/v1/lp-positions` | Uniswap V3 LP positions. |
+| `GET`  | `/api/v1/experiments` | 4 in-memory presets. |
+| `GET`  | `/api/v1/experiments/{id}` | Single preset (404 if unknown). |
+| `POST` | `/api/v1/experiments/sandwich` | Run a sandwich simulation. |
+| `POST` | `/api/v1/experiments/il` | Compute V2 / V3 IL. |
+| `POST` | `/api/v1/experiments/attribution` | 4-component PnL decomposition. |
+| `GET`  | `/ws` | WebSocket — see below. |
+
+### Error envelope
+
+Every 4xx / 5xx response is a JSON object of the form:
+
+```json
+{ "error": "not_found", "message": "missing preset: 'foo'" }
+```
+
+| `error` | HTTP | When |
+| --- | --- | --- |
+| `not_found` | 404 | Unknown resource id. |
+| `validation` | 422 | Pydantic request validation. |
+| `upstream_unreachable` | 502 | RPC / external dependency failure. |
+| `internal` | 500 | Unhandled exception. |
+| `http_<code>` | various | Other 4xx from the framework. |
+
+`details` is included only when there's a structured payload (e.g.
+`{ "errors": [...] }` for validation).
+
+## WebSocket
+
+`GET /ws` accepts a single client per connection and emits envelopes:
+
+| `type` | Direction | Purpose |
+| --- | --- | --- |
+| `welcome` | server → client | On connect. |
+| `subscribed` / `unsubscribed` | server → client | Ack for `subscribe` / `unsubscribe`. |
+| `pong` | server → client | Reply to a client `ping`. |
+| `mempool_tx` | server → client | Mempool transaction. |
+| `amm_sync` | server → client | AMM reserve update. |
+| `liquidation_event` | server → client | Aave V3 liquidation. |
+| `block_confirm` | server → client | New block. |
+| `error` | server → client | `{error, message}` envelope. |
+
+Client → server actions: `subscribe` / `unsubscribe` / `ping` (all
+JSON with a `topics` list, except `ping`).
 
 ## Configuration
 
@@ -70,6 +128,7 @@ for the full list.  Highlights:
 | `PORT` | `8000` | uvicorn bind port |
 | `HOST` | `0.0.0.0` | uvicorn bind host |
 | `LOG_LEVEL` | `info` | `debug` / `info` / `warning` / `error` |
+| `ENV` | `dev` | `dev` / `test` / `prod` |
 | `RPC_URL` | `https://eth.llamarpc.com` | Ethereum mainnet by default |
 | `RPC_WS_URL` | *(unset)* | Optional WebSocket endpoint |
 | `CHAIN_ID` | `1` | Used to label `/api/v1/health` |
@@ -90,7 +149,22 @@ pytest --cov=src/dtm_backend --cov-report=term-missing
 
 Coverage is configured in `pyproject.toml` to omit `main.py` and
 the `scripts/` package (those are entry points, not library
-code).  Per-glob thresholds will be added in Phase 5.
+code).  Per-glob thresholds are enforced by
+[`scripts/coverage_check.py`](../scripts/coverage_check.py):
+
+| Glob | Threshold |
+| --- | --- |
+| `chain/` | ≥ 80 % |
+| `experiments/` | ≥ 90 % |
+| `routes/` | ≥ 70 % |
+
+Run the gate locally:
+
+```bash
+coverage run -m pytest tests/ -q
+coverage json -o coverage/coverage.json
+python3.12 ../scripts/coverage_check.py --coverage coverage/coverage.json
+```
 
 ## CORS
 
@@ -104,6 +178,24 @@ previous TypeScript backend):
 
 `allow_credentials` is always `False` (CORS spec forbids `*` with
 credentials).
+
+## CI
+
+The GitHub Actions pipeline (`.github/workflows/ci.yml`) runs four
+jobs on every push to `main` and on pull requests:
+
+1. `backend · unit` — pip install, ruff, mypy, pytest, coverage
+2. `frontend · unit` — pnpm lint / typecheck / test
+3. `e2e · backend skeleton` — boots the offline stub, runs
+   `scripts/e2e-smoke.sh`
+4. `frontend · build` — `pnpm build` with `VITE_USE_BACKEND=true`
+
+## End-to-end smoke
+
+[`scripts/e2e-smoke.sh`](../scripts/e2e-smoke.sh) installs the
+backend, boots the offline e2e stub on a free port, and verifies
+the wire shape of every REST endpoint, the CORS headers, and the
+`/ws` envelope flow.  Use it locally or in CI.
 
 ## License
 

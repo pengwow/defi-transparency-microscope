@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from dtm_backend.config import Config, load_config
+from dtm_backend.errors import register_exception_handlers
 from dtm_backend.routes import experiments as experiments_route
 from dtm_backend.routes import health as health_route
 from dtm_backend.routes import lending as lending_route
@@ -115,6 +116,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         allow_methods=cors["allow_methods"],
         allow_headers=cors["allow_headers"],
     )
+
+    # Global exception handlers — installed BEFORE routes so they
+    # wrap the route stack and emit the unified error envelope.
+    register_exception_handlers(app)
 
     # Routes — currently `/api/v1/health`, `/pools`, `/transactions`,
     # `/lending-positions`, `/lp-positions`, plus the experiments

@@ -8,8 +8,23 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import Any
 
 import structlog
+
+
+def _add_logger_name_with_module(
+    _logger: Any,
+    _method_name: str,
+    event_dict: structlog.types.EventDict,
+) -> structlog.types.EventDict:
+    """Like `structlog.stdlib.add_logger_name`, but works with the
+    `PrintLoggerFactory` (which produces a `PrintLogger` lacking
+    a `.name` attribute).  Falls back to the bound `module` key
+    so the JSON envelope still carries a `logger` field.
+    """
+    event_dict.setdefault("logger", event_dict.get("module") or "dtm-backend")
+    return event_dict
 
 
 def configure_logging(level: str = "info", service: str = "dtm-backend") -> None:
@@ -24,7 +39,7 @@ def configure_logging(level: str = "info", service: str = "dtm-backend") -> None
     pre_chain: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
-        structlog.stdlib.add_logger_name,
+        _add_logger_name_with_module,
         timestamper,
     ]
 
