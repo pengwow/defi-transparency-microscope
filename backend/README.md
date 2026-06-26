@@ -39,9 +39,17 @@ The server listens on `:8000` by default. Hit `GET /api/v1/health` to verify.
 
 ## Run end-to-end (no mainnet RPC required)
 
-The backend ships an offline stub (`scripts/e2e-server.ts`) that answers
-every `provider.call` / `getLogs` / etc. with realistic canned data —
-handy for frontend integration tests in air-gapped environments:
+A one-shot smoke script at [`scripts/e2e-smoke.sh`](./scripts/e2e-smoke.sh)
+builds the backend, boots the offline stub on a free port, waits for
+`/api/v1/health`, runs the frontend HttpAPI integration suite, and
+tears the stub down — exit code reflects full pass/fail:
+
+```bash
+./scripts/e2e-smoke.sh        # default port 8765
+PORT=9000 ./scripts/e2e-smoke.sh
+```
+
+For interactive debugging you can also drive the two halves by hand:
 
 ```bash
 # Terminal 1 — stub backend on :8765

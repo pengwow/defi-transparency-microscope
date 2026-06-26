@@ -100,30 +100,13 @@ jobs:
       - name: Build backend
         run: pnpm build
         working-directory: backend
-      - name: Start e2e stub server
-        run: |
-          pnpm e2e:server > /tmp/e2e-server.log 2>&1 &
-          for i in $(seq 1 60); do
-            if curl -fsS -m 1 http://127.0.0.1:8765/api/v1/health >/dev/null 2>&1; then
-              echo "e2e stub ready after ${i} ticks"
-              exit 0
-            fi
-            sleep 0.5
-          done
-          echo "e2e stub failed to start in 30s"
-          cat /tmp/e2e-server.log
-          exit 1
-      - name: Run frontend integration tests
+      - name: Run end-to-end smoke
         env:
-          INTEGRATION_BACKEND_URL: http://127.0.0.1:8765
-        run: pnpm test:integration
-        working-directory: frontend
+          PORT: 8765
+        run: ./scripts/e2e-smoke.sh
       - name: Dump server log on failure
         if: failure()
-        run: cat /tmp/e2e-server.log
-      - name: Stop e2e stub
-        if: always()
-        run: pkill -f e2e-server || true
+        run: KEEP_LOG=1 bash -c 'ls -la /tmp/e2e-smoke-*-server.log 2>/dev/null | tail -1 | awk "{print \$NF}" | xargs -I{} cat {} || true'
 
   # ──────────────────────────────────────────────────────────────────
   # Frontend production build (with VITE_USE_BACKEND=true to catch
