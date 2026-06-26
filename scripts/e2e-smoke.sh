@@ -6,8 +6,14 @@
 #   1. Installs the Python backend in editable mode.
 #   2. Boots the offline e2e stub server on a free port.
 #   3. Waits for /api/v1/health to become reachable.
-#   4. Verifies the wire shape of /api/v1/health.
-#   5. Always tears the server down (success or failure).
+#   4. Verifies the wire shape of every Phase 1 + Phase 2 endpoint:
+#        - GET /api/v1/health
+#        - GET /api/v1/pools
+#        - GET /api/v1/transactions
+#        - GET /api/v1/lending-positions
+#        - GET /api/v1/lp-positions
+#   5. Verifies CORS headers on /api/v1/health.
+#   6. Always tears the server down (success or failure).
 #
 # Usage:
 #   ./scripts/e2e-smoke.sh
@@ -16,8 +22,9 @@
 # Exits 0 on full success, non-zero on any failure.
 #
 # Note: the frontend HttpAPI integration suite is wired in once the
-# chain layer and experiments land (Phase 2 / Phase 3).  Phase 1
-# only verifies the skeleton is reachable end-to-end.
+# chain layer and experiments land (Phase 2 / Phase 3).  This script
+# only verifies the backend skeleton is reachable end-to-end and
+# returns the expected wire shapes for every documented route.
 #
 set -euo pipefail
 
@@ -136,7 +143,109 @@ if [ "${HEALTH_BODY}" != "${EXPECTED}" ]; then
 fi
 ok "/api/v1/health shape OK"
 
-# ─── Step 5: Verify CORS preflight ─────────────────────────────────────
+# ─── Step 5: Verify /api/v1/pools wire shape ───────────────────────────
+log "verifying /api/v1/pools wire shape…"
+POOLS_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/pools")"
+log "  → $(printf '%s' "${POOLS_BODY}" | head -c 120)…"
+# The offline stub returns 3 pools (1 V2 + 2 V3) per the canned fetcher.
+if ! printf '%s' "${POOLS_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body, list), f'expected list, got {type(body).__name__}'
+assert len(body) == 3, f'expected 3 pools, got {len(body)}'
+v2 = [p for p in body if p.get('protocol') == 'uniswap_v2']
+v3 = [p for p in body if p.get('protocol') == 'uniswap_v3']
+assert len(v2) == 1, f'expected 1 V2 pool, got {len(v2)}'
+assert len(v3) == 2, f'expected 2 V3 pools, got {len(v3)}'
+# V3 entries carry camelCase sqrtPriceX96 as a decimal string.
+for p in v3:
+    assert isinstance(p.get('sqrtPriceX96'), str), 'sqrtPriceX96 must be a string'
+    assert p['sqrtPriceX96'].isdigit(), 'sqrtPriceX96 must be a decimal string'
+    assert isinstance(p.get('feeTier'), int), 'feeTier must be an int'
+print('pools ok')
+"; then
+  warn "got: ${POOLS_BODY}"
+  die "/api/v1/pools did not return the expected wire shape"
+fi
+ok "/api/v1/pools shape OK"
+
+# ─── Step 6: Verify /api/v1/transactions wire shape ────────────────────
+log "verifying /api/v1/transactions wire shape…"
+TXS_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/transactions")"
+log "  → $(printf '%s' "${TXS_BODY}" | head -c 120)…"
+if ! printf '%s' "${TXS_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body, list), f'expected list, got {type(body).__name__}'
+assert len(body) >= 1, f'expected at least 1 tx, got {len(body)}'
+# BackendTx wire-format keys.
+REQUIRED = {'hash', 'from', 'to', 'value', 'gasPrice', 'gasLimit', 'input', 'nonce', 'timestamp', 'type'}
+for tx in body:
+    missing = REQUIRED - set(tx.keys())
+    assert not missing, f'tx missing keys: {missing}'
+    # BigInts round-trip as decimal strings.
+    assert isinstance(tx['value'], str) and tx['value'].isdigit(), 'value must be a decimal string'
+    assert isinstance(tx['gasPrice'], str) and tx['gasPrice'].isdigit(), 'gasPrice must be a decimal string'
+    assert isinstance(tx['gasLimit'], str) and tx['gasLimit'].isdigit(), 'gasLimit must be a decimal string'
+print('transactions ok')
+"; then
+  warn "got: ${TXS_BODY}"
+  die "/api/v1/transactions did not return the expected wire shape"
+fi
+ok "/api/v1/transactions shape OK"
+
+# ─── Step 7: Verify /api/v1/lending-positions wire shape ───────────────
+log "verifying /api/v1/lending-positions wire shape…"
+LEND_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/lending-positions")"
+log "  → $(printf '%s' "${LEND_BODY}" | head -c 120)…"
+if ! printf '%s' "${LEND_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body, list), f'expected list, got {type(body).__name__}'
+assert len(body) == 1, f'expected exactly 1 position, got {len(body)}'
+pos = body[0]
+assert pos.get('protocol') == 'aave_v3', f'expected aave_v3, got {pos.get(\"protocol\")}'
+assert isinstance(pos.get('collateral'), dict), 'collateral must be a dict'
+assert isinstance(pos.get('debt'), dict), 'debt must be a dict'
+assert isinstance(pos.get('healthFactor'), (int, float)), 'healthFactor must be a number'
+assert isinstance(pos.get('liquidationThresholdE18'), str), 'liquidationThresholdE18 must be a decimal string'
+assert pos['liquidationThresholdE18'].isdigit(), 'liquidationThresholdE18 must be a decimal string'
+print('lending ok')
+"; then
+  warn "got: ${LEND_BODY}"
+  die "/api/v1/lending-positions did not return the expected wire shape"
+fi
+ok "/api/v1/lending-positions shape OK"
+
+# ─── Step 8: Verify /api/v1/lp-positions wire shape ───────────────────
+log "verifying /api/v1/lp-positions wire shape…"
+LP_BODY="$(curl -fsS -m 2 "http://${HOST}:${PORT}/api/v1/lp-positions")"
+log "  → $(printf '%s' "${LP_BODY}" | head -c 120)…"
+if ! printf '%s' "${LP_BODY}" | "${PY}" -c "
+import json, sys
+body = json.load(sys.stdin)
+assert isinstance(body, list), f'expected list, got {type(body).__name__}'
+assert len(body) == 1, f'expected exactly 1 lp position, got {len(body)}'
+pos = body[0]
+assert pos.get('protocol') == 'uniswap_v3', f'expected uniswap_v3, got {pos.get(\"protocol\")}'
+assert pos.get('status') == 'active', f'expected status=active, got {pos.get(\"status\")}'
+assert isinstance(pos.get('poolId'), str), 'poolId must be a string'
+assert isinstance(pos.get('token0'), dict), 'token0 must be a dict'
+assert isinstance(pos.get('token1'), dict), 'token1 must be a dict'
+assert isinstance(pos.get('tickLower'), int), 'tickLower must be an int'
+assert isinstance(pos.get('tickUpper'), int), 'tickUpper must be an int'
+assert isinstance(pos.get('feeTier'), int), 'feeTier must be an int'
+# BigInts round-trip as decimal strings.
+for field in ('amount0', 'amount1', 'feeIncomeE18', 'impermanentLossE18', 'netPnlE18'):
+    assert isinstance(pos.get(field), str) and pos[field].isdigit(), f'{field} must be a decimal string'
+print('lp ok')
+"; then
+  warn "got: ${LP_BODY}"
+  die "/api/v1/lp-positions did not return the expected wire shape"
+fi
+ok "/api/v1/lp-positions shape OK"
+
+# ─── Step 9: Verify CORS preflight ─────────────────────────────────────
 log "verifying CORS headers…"
 CORS_ORIGIN="$(curl -fsS -m 2 -D - -o /dev/null \
   -H "Origin: http://localhost:5173" \

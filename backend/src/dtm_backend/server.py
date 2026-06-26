@@ -16,6 +16,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from dtm_backend.config import Config, load_config
 from dtm_backend.routes import health as health_route
+from dtm_backend.routes import lending as lending_route
+from dtm_backend.routes import lp as lp_route
+from dtm_backend.routes import pools as pools_route
+from dtm_backend.routes import transactions as transactions_route
 
 log = structlog.get_logger(__name__)
 
@@ -102,10 +106,14 @@ def create_app(config: Config | None = None) -> FastAPI:
         allow_headers=cors["allow_headers"],
     )
 
-    # Routes — currently only `/api/v1/health`.  Later phases
-    # append the pool / transaction / position / experiment / ws
-    # routers.
+    # Routes — currently `/api/v1/health`, `/pools`, `/transactions`,
+    # `/lending-positions`, `/lp-positions`.  Phase 4 appends the
+    # `/ws` WebSocket route.
     app.include_router(health_route.router, prefix="/api/v1")
+    app.include_router(pools_route.router, prefix="/api/v1")
+    app.include_router(transactions_route.router, prefix="/api/v1")
+    app.include_router(lending_route.router, prefix="/api/v1")
+    app.include_router(lp_route.router, prefix="/api/v1")
 
     return app
 
