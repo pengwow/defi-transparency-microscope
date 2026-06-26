@@ -41,6 +41,24 @@ const skipAll = BASE_URL === '';
         ws.terminate();
         reject(new Error(`WS connect timeout: ${wsUrl}`));
       }, 5_000);
+      // Pre-attach a message buffer so the welcome envelope (which
+      // the server emits immediately on upgrade) can't race the
+      // first `nextMessage()` listener.
+      const buffer: string[] = [];
+      const waiters: Array<(data: string) => void> = [];
+      ws.on('message', (data) => {
+        const s = data.toString();
+        if (waiters.length > 0) {
+          const w = waiters.shift()!;
+          w(s);
+        } else {
+          buffer.push(s);
+        }
+      });
+      (ws as unknown as { __popMessage?: () => Promise<string> }).__popMessage = () => {
+        if (buffer.length > 0) return Promise.resolve(buffer.shift()!);
+        return new Promise((res) => waiters.push(res));
+      };
       ws.once('open', () => {
         clearTimeout(t);
         opened.push(ws);
@@ -53,17 +71,22 @@ const skipAll = BASE_URL === '';
     });
   }
 
-  function nextMessage(ws: WebSocket, timeoutMs = 2_000): Promise<unknown> {
+  function nextMessage(ws: WebSocket, timeoutMs = 5_000): Promise<unknown> {
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('next-message timeout')), timeoutMs);
-      ws.once('message', (data) => {
-        clearTimeout(t);
-        try {
-          resolve(JSON.parse(data.toString()));
-        } catch {
-          resolve(data.toString());
-        }
-      });
+      const t = setTimeout(
+        () => reject(new Error('next-message timeout')),
+        timeoutMs,
+      );
+      (ws as unknown as { __popMessage: () => Promise<string> })
+        .__popMessage()
+        .then((s) => {
+          clearTimeout(t);
+          try {
+            resolve(JSON.parse(s));
+          } catch {
+            resolve(s);
+          }
+        });
     });
   }
 

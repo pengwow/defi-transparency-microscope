@@ -209,11 +209,20 @@ export async function buildServer(opts: BuildServerOptions): Promise<FastifyInst
     void reply.status(404).send({ error: 'not_found', message: 'route not found' });
   });
 
-  await app.register(cors, buildCorsOptions(config, opts.corsOriginsOverride, opts.corsAllowAllOverride));
-  // @fastify/websocket is registered here (vs the route file) so the
-  // hub is available to the route plugin via the app decorator.
+  // Register the WebSocket plugin BEFORE CORS so the upgrade handler
+  // is wired first.  @fastify/cors's preflight hook is harmless for
+  // browser cross-origin requests, but we don't want it to be in
+  // front of the upgrade path even briefly.
   await app.register(websocket);
   await app.register(wsRoutes, { hub });
+  await app.register(cors, buildCorsOptions(config, opts.corsOriginsOverride, opts.corsAllowAllOverride));
+
+  // ─── CORS behaviour reference ───────────────────────────────────
+  // `origin: true` (the old default) means "echo the request origin
+  // back in the response header".  `buildCorsOptions` now returns
+  // a structured allow-list (or `*`) so prod can lock the surface
+  // down.  See `tests/buildCorsOptions.test.ts` for the resolution
+  // rules.
 
   // Routes are registered under /api/v1 via the per-plugin `prefix` option
   // so each route file declares short, relative paths.
