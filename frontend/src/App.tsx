@@ -29,7 +29,7 @@ import { useExperimentStore } from '@/store/experimentStore';
 import { useLiveStore } from '@/store/liveStore';
 import { usePositionStore } from '@/store/positionStore';
 import { useUiStore, type Page } from '@/store/uiStore';
-import { currentAPI } from '@/services';
+import { currentAPI, currentWSClient } from '@/services';
 import { runDemo, type DemoKind } from '@/services/demoScript';
 import { spotPriceE18 } from '@/algorithms/cpmm';
 import { EducationPage } from '@/pages/EducationPage';
@@ -112,6 +112,72 @@ export function App() {
   const enterMicroscope = () => {
     void runDemo('microscope');
   };
+
+  // Wire the live WS client (only present in backend mode) to the
+  // live store.  In mock mode the demo script drives the store.
+  useEffect(() => {
+    if (!currentWSClient) return;
+    const ws = currentWSClient;
+    // Subscribe to the topics that the UI cares about.
+    ws.subscribe(['mempool', 'liquidation_event', 'amm_sync']);
+
+    // Hook the onMessage stream to the live store.
+    const onMsg = (msg: { type: string; data: unknown }) => {
+      if (msg.type === 'mempool_tx') {
+        const d = msg.data as {
+          hash: string;
+          from: string;
+          timestamp: number;
+          type: 'normal' | 'sandwich' | 'arbitrage' | 'jit' | 'liquidation';
+        };
+        useLiveStore.getState().pushTx({
+          hash: d.hash,
+          from: d.from,
+          timestamp: d.timestamp,
+          mevType: d.type === 'arbitrage' ? 'arb' : (d.type as never),
+        });
+      } else if (msg.type === 'liquidation_event') {
+        const d = msg.data as { profit: string | bigint };
+        const profit = typeof d.profit === 'string' ? BigInt(d.profit) : d.profit;
+        useLiveStore.setState((s) => ({
+          cumulativeMevWei: s.cumulativeMevWei + profit,
+        }));
+      } else if (msg.type === 'amm_sync') {
+        // amm_sync is a V2 Sync / V3 Swap reduction; the live store
+        // stores a single 1e18-fixed-point price.  For V2 we can
+        // recompute via CPMM; for V3 the wire doesn't carry enough
+        // info to recompute, so we leave the price as-is.
+        const d = msg.data as {
+          pool: string;
+          reserve0: string | bigint;
+          reserve1: string | bigint;
+        };
+        const r0 = typeof d.reserve0 === 'string' ? BigInt(d.reserve0) : d.reserve0;
+        const r1 = typeof d.reserve1 === 'string' ? BigInt(d.reserve1) : d.reserve1;
+        try {
+          // spotPriceE18(r0, r1) returns bigint 1e18. Only update if
+          // both reserves are non-zero (sanity).
+          if (r0 > 0n && r1 > 0n) {
+            // We can't recompute precisely without a token-decimals
+            // table; use a 1e18-scaled ratio.  This is good enough
+            // for the live UI's "price changed" indicator.
+            const scaled = (r1 * 10n ** 18n) / r0;
+            useLiveStore.getState().setAmmPrice(scaled);
+          }
+        } catch {
+          /* ignore malformed amm_sync */
+        }
+      }
+    };
+    // Attach the message handler via the public setter.
+    ws.setOnMessage(onMsg);
+    ws.start();
+
+    return () => {
+      ws.stop();
+      ws.setOnMessage(null);
+    };
+  }, []);
 
   // While loading, just render the background (avoid the loading
   // screen which would be immediately covered by the particle field).
