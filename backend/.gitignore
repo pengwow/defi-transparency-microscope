@@ -22,6 +22,7 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.xml
+coverage/
 .coverage_reports/
 .pytest_cache/
 .mypy_cache/
