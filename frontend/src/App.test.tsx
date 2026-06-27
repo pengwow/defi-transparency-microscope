@@ -75,6 +75,28 @@ describe('App', () => {
     });
   });
 
+  // Regression for "清算页面下方什么都不显示":
+  // The Liquidation page's root <div> used to be hidden because
+  // `.dtm-page { display: none }` was applied to *every* page root
+  // and only LiveSamplingPage opted in to `.is-active`.  After the
+  // CSS fix the page renders its children unconditionally.  This
+  // test guards against the bug returning: clicking the Liquidation
+  // tab must surface the panorama container, the explanation block,
+  // and the AMM disturbance canvas — all of which sit *below* the
+  // mode bar that the user reported they could still see.
+  it('renders the Liquidation page contents (not just the mode bar)', async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('app-header')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('tab', { name: /清算/ }));
+    await waitFor(() => {
+      expect(screen.getByTestId('liquidation-panorama-container')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('liquidation-explanation-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('amm-disturbance-canvas')).toBeInTheDocument();
+  });
+
   it('populates the live store on mount', async () => {
     render(<App />);
     await waitFor(() => {

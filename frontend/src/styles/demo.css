@@ -10,9 +10,17 @@
  * Tab 内特殊类（mempool / edu / liq / lp / report 内部）后续 batch 单独搬。
  */
 
-/* ===== PAGE ===== */
+/* ===== PAGE =====
+ *
+ * Page roots use the `dtm-page` class.  Visibility is *not* controlled
+ * by CSS — the app shell (<CurrentPage />) only mounts the page the
+ * user is on, so a hidden page simply isn't in the tree.  Default to
+ * `display: block` so the content shows up immediately.  The legacy
+ * `.is-active` selector is kept as a no-op alias for any markup that
+ * still uses it (e.g. `LiveSamplingPage`).
+ */
 .dtm-page {
-  display: none;
+  display: block;
   animation: dtm-fadeIn 0.5s ease-out;
   position: relative;
   z-index: 1;
