@@ -350,22 +350,39 @@ if [ "${START_BACKEND}" -eq 1 ] && [ "${START_FRONTEND}" -eq 1 ]; then
   kill -0 "${BACKEND_PID}"  2>/dev/null && be_alive=1
   kill -0 "${FRONTEND_PID}" 2>/dev/null && fe_alive=1
   if [ "${be_alive}" -eq 0 ] && [ "${fe_alive}" -eq 1 ]; then
-    # Backend died on its own.  Reap it (non-blocking) to
-    # recover the exit code, then tear down the frontend.
-    wait "${BACKEND_PID}"; EXIT_CODE=$?
-    log "backend exited (code=${EXIT_CODE}) — stopping frontend"
-    shutdown
-  elif [ "${be_alive}" -eq 1 ] && [ "${fe_alive}" -eq 0 ]; then
-    # Frontend died on its own.
-    wait "${FRONTEND_PID}"; EXIT_CODE=$?
-    log "frontend exited (code=${EXIT_CODE}) — stopping backend"
-    shutdown
-  else
-    # Both dead (race) — reap both for the exit code.
-    wait "${BACKEND_PID}";  be_exit=$?
-    wait "${FRONTEND_PID}"; fe_exit=$?
-    EXIT_CODE=$(( be_exit != 0 ? be_exit : fe_exit ))
-  fi
+  # Backend died on its own.  Reap it (non-blocking) to
+  # recover the exit code, then tear down the frontend.
+  # `set +e` is required because `wait` is a special builtin
+  # under POSIX, and a non-zero return from it would otherwise
+  # abort the script under `set -e` *before* we get a chance to
+  # log which service died and where to find its log file.
+  set +e
+  wait "${BACKEND_PID}"; EXIT_CODE=$?
+  set -e
+  log "backend exited (code=${EXIT_CODE}) — stopping frontend"
+  [ -n "${FRONTEND_LOG}" ] && log "  backend log:  ${BACKEND_LOG}"
+  shutdown
+elif [ "${be_alive}" -eq 1 ] && [ "${fe_alive}" -eq 0 ]; then
+  # Frontend died on its own.  Same `set +e` rationale as above.
+  set +e
+  wait "${FRONTEND_PID}"; EXIT_CODE=$?
+  set -e
+  log "frontend exited (code=${EXIT_CODE}) — stopping backend"
+  [ -n "${FRONTEND_LOG}" ] && log "  frontend log: ${FRONTEND_LOG}"
+  shutdown
+else
+  # Both dead (race) — reap both for the exit code.  We also
+  # log the exit codes here because the asymmetric branches
+  # above don't fire in this case.
+  set +e
+  wait "${BACKEND_PID}";  be_exit=$?
+  wait "${FRONTEND_PID}"; fe_exit=$?
+  set -e
+  log "both services exited: backend=${be_exit} frontend=${fe_exit}"
+  [ -n "${BACKEND_LOG}" ]  && log "  backend log:  ${BACKEND_LOG}"
+  [ -n "${FRONTEND_LOG}" ] && log "  frontend log: ${FRONTEND_LOG}"
+  EXIT_CODE=$(( be_exit != 0 ? be_exit : fe_exit ))
+fi
 elif [ "${START_BACKEND}" -eq 1 ]; then
   set +e
   wait "${BACKEND_PID}"
