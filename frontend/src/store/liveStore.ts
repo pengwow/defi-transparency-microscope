@@ -25,13 +25,22 @@ export interface LiveState {
   mempool: MempoolEntry[];
   ammPriceE18: bigint;
   cumulativeMevWei: bigint;
+  /**
+   * Whether the frontend is currently receiving live data from a
+   * real backend (true) or running in self-contained mock mode (false).
+   * Drives the "Backend: live" / "Backend: demo" badge on the live
+   * page so the user can tell fake data from real data at a glance.
+   */
+  backendConnected: boolean;
   init: (seed: {
     mempool?: MempoolEntry[];
     ammPriceE18?: bigint;
     cumulativeMevWei?: bigint;
+    backendConnected?: boolean;
   }) => void;
   pushTx: (tx: MempoolEntry) => void;
   setAmmPrice: (p: bigint) => void;
+  setBackendConnected: (b: boolean) => void;
   reset: () => void;
 }
 
@@ -39,11 +48,23 @@ export const useLiveStore = create<LiveState>((set) => ({
   mempool: [],
   ammPriceE18: 0n,
   cumulativeMevWei: 0n,
-  init: ({ mempool = [], ammPriceE18 = 0n, cumulativeMevWei = 0n }) =>
-    set({ mempool, ammPriceE18, cumulativeMevWei }),
+  backendConnected: false,
+  init: ({
+    mempool = [],
+    ammPriceE18 = 0n,
+    cumulativeMevWei = 0n,
+    backendConnected = false,
+  }) => set({ mempool, ammPriceE18, cumulativeMevWei, backendConnected }),
   pushTx: (tx) => set((s) => ({ mempool: [...s.mempool, tx] })),
   setAmmPrice: (ammPriceE18) => set({ ammPriceE18 }),
-  reset: () => set({ mempool: [], ammPriceE18: 0n, cumulativeMevWei: 0n }),
+  setBackendConnected: (backendConnected) => set({ backendConnected }),
+  reset: () =>
+    set({
+      mempool: [],
+      ammPriceE18: 0n,
+      cumulativeMevWei: 0n,
+      backendConnected: false,
+    }),
 }));
 
 // Keep the import as type-only so the bundler tree-shakes the runtime.

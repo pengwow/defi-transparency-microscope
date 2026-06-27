@@ -20,6 +20,10 @@ const DEFAULT_PRICE = 2456.32;
 
 let priceHistory: number[] = [];
 let livePrice = DEFAULT_PRICE;
+// Track the last price we actually pushed into the history, so a
+// stream of identical WS ticks doesn't pad the chart with the
+// same value and produce a flat line that pretends to be moving.
+let lastPushedPrice: number | null = null;
 
 function seedHistory(): void {
   priceHistory = [];
@@ -28,6 +32,7 @@ function seedHistory(): void {
   for (let i = 0; i < HISTORY_LEN; i++) {
     priceHistory.push(DEFAULT_PRICE);
   }
+  lastPushedPrice = DEFAULT_PRICE;
 }
 
 // Initialise the module-level state on import so consumers can read the
@@ -40,9 +45,25 @@ export function updatePrice(amount: number = 2): void {
   const delta = (Math.random() * 2 - 1) * amount;
   livePrice = Math.max(1, livePrice + delta);
   priceHistory.push(livePrice);
+  lastPushedPrice = livePrice;
   if (priceHistory.length > HISTORY_LEN) {
     priceHistory.shift();
   }
+}
+
+/** Push a real price into the chart history.  Repeated values are
+ *  deduped so a flat market doesn't pollute the rolling window
+ *  with the same point.  Returns true if a new point was added. */
+export function setLivePrice(price: number): boolean {
+  if (!Number.isFinite(price) || price <= 0) return false;
+  if (lastPushedPrice !== null && price === lastPushedPrice) return false;
+  livePrice = price;
+  priceHistory.push(price);
+  lastPushedPrice = price;
+  if (priceHistory.length > HISTORY_LEN) {
+    priceHistory.shift();
+  }
+  return true;
 }
 
 /** Drop the history and reseed with the default price. */

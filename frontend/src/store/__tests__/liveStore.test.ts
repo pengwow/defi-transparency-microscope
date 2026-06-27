@@ -6,11 +6,37 @@ describe('store/liveStore', () => {
     useLiveStore.getState().reset();
   });
 
-  it('initial state after reset is empty', () => {
+  it('initial state after reset is empty and backendConnected=false', () => {
     const s = useLiveStore.getState();
     expect(s.mempool).toEqual([]);
     expect(s.ammPriceE18).toBe(0n);
     expect(s.cumulativeMevWei).toBe(0n);
+    expect(s.backendConnected).toBe(false);
+  });
+
+  it('init seeds backendConnected when provided', () => {
+    useLiveStore.getState().init({ mempool: [], backendConnected: true });
+    expect(useLiveStore.getState().backendConnected).toBe(true);
+  });
+
+  it('init defaults backendConnected to false when not provided', () => {
+    useLiveStore.getState().init({ mempool: [] });
+    expect(useLiveStore.getState().backendConnected).toBe(false);
+  });
+
+  it('setBackendConnected flips the flag true and back to false', () => {
+    const set = useLiveStore.getState().setBackendConnected;
+    expect(useLiveStore.getState().backendConnected).toBe(false);
+    set(true);
+    expect(useLiveStore.getState().backendConnected).toBe(true);
+    set(false);
+    expect(useLiveStore.getState().backendConnected).toBe(false);
+  });
+
+  it('reset clears backendConnected back to false', () => {
+    useLiveStore.getState().setBackendConnected(true);
+    useLiveStore.getState().reset();
+    expect(useLiveStore.getState().backendConnected).toBe(false);
   });
 
   it('init seeds the mempool, price, and cumulative MEV', () => {
@@ -53,11 +79,13 @@ describe('store/liveStore', () => {
       mempool: [{ hash: '0x1', from: '0xa', timestamp: 1, mevType: 'normal' }],
       ammPriceE18: 3000n * 10n ** 18n,
       cumulativeMevWei: 999n,
+      backendConnected: true,
     });
     useLiveStore.getState().reset();
     const s = useLiveStore.getState();
     expect(s.mempool).toEqual([]);
     expect(s.ammPriceE18).toBe(0n);
     expect(s.cumulativeMevWei).toBe(0n);
+    expect(s.backendConnected).toBe(false);
   });
 });

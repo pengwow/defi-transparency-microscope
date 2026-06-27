@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { drawLiveAmm, resetLiveAmm, updatePrice } from '../LiveAmm';
+import { drawLiveAmm, getLivePrice, resetLiveAmm, setLivePrice, updatePrice } from '../LiveAmm';
 import type { CanvasSize } from '../types';
 
 const size: CanvasSize = { width: 320, height: 200 };
@@ -78,5 +78,43 @@ describe('LiveAmm', () => {
     resetLiveAmm();
     // After reset, the chart should still render without throwing.
     expect(() => drawLiveAmm(ctx, size)).not.toThrow();
+  });
+
+  it('setLivePrice pushes a real price and updates getLivePrice', () => {
+    resetLiveAmm();
+    setLivePrice(2735.5);
+    expect(getLivePrice()).toBe(2735.5);
+    setLivePrice(2736.25);
+    expect(getLivePrice()).toBe(2736.25);
+  });
+
+  it('setLivePrice dedupes repeated values (no double-push into history)', () => {
+    resetLiveAmm();
+    // Set the same value 5 times; the chart's rolling window should
+    // NOT be padded with duplicates — this is the whole reason
+    // setLivePrice exists separately from updatePrice.
+    for (let i = 0; i < 5; i++) setLivePrice(2500);
+    setLivePrice(2501); // bump
+    // Now spam the new value — should still be just one point.
+    for (let i = 0; i < 5; i++) setLivePrice(2501);
+    // We can't directly inspect the history (it's module-level),
+    // but we can verify that the chart still renders cleanly and
+    // that the *next* call with a different value updates the
+    // current price.
+    expect(() => drawLiveAmm(ctx, size)).not.toThrow();
+    setLivePrice(2502);
+    expect(getLivePrice()).toBe(2502);
+  });
+
+  it('setLivePrice rejects non-finite and non-positive values', () => {
+    resetLiveAmm();
+    const before = getLivePrice();
+    expect(setLivePrice(Number.NaN)).toBe(false);
+    expect(setLivePrice(Number.POSITIVE_INFINITY)).toBe(false);
+    expect(setLivePrice(0)).toBe(false);
+    expect(setLivePrice(-1)).toBe(false);
+    // getLivePrice is unchanged because none of the bad values
+    // were accepted.
+    expect(getLivePrice()).toBe(before);
   });
 });

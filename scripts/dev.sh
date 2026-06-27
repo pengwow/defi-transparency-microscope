@@ -67,7 +67,9 @@ Usage: scripts/dev.sh [--backend-only | --frontend-only]
 Environment overrides:
   BACKEND_PORT, FRONTEND_PORT, BACKEND_HOST, FRONTEND_HOST, PY,
   SKIP_PY_CHECK, SKIP_PORT_CHECK, KEEP_LOGS,
-  SKIP_INSTALL=1   skip the auto-install (CI / sandboxed use)
+  SKIP_INSTALL=1             skip the auto-install (CI / sandboxed use)
+  VITE_USE_BACKEND           default "true"  (set to "false" for offline demo)
+  VITE_BACKEND_URL           default "http://${BACKEND_HOST}:${BACKEND_PORT}"
 USAGE
 }
 
@@ -325,10 +327,20 @@ launch_frontend() {
   local logfile
   logfile="$(mktemp -t dev-frontend.XXXXXX.log)"
   FRONTEND_LOG="${logfile}"
+  # Default to talking to the real backend so the live page isn't
+  # stuck in mock mode.  Users can opt out with VITE_USE_BACKEND=false
+  # (useful for offline demos / e2e screenshots) or point at a
+  # different host with VITE_BACKEND_URL=...
+  local vite_use_backend="${VITE_USE_BACKEND:-true}"
+  local vite_backend_url="${VITE_BACKEND_URL:-http://${BACKEND_HOST}:${BACKEND_PORT}}"
+  log "frontend VITE_USE_BACKEND=${vite_use_backend} VITE_BACKEND_URL=${vite_backend_url}"
   launch_service "frontend" "FRONTEND_PID" "${logfile}" \
     "FRONTEND_TAIL_PID" "${frontend_prefix}" \
-    pnpm --dir "${REPO_ROOT}/frontend" \
-      exec vite --host "${FRONTEND_HOST}" --port "${FRONTEND_PORT}" --strictPort
+    env \
+      VITE_USE_BACKEND="${vite_use_backend}" \
+      VITE_BACKEND_URL="${vite_backend_url}" \
+      pnpm --dir "${REPO_ROOT}/frontend" \
+        exec vite --host "${FRONTEND_HOST}" --port "${FRONTEND_PORT}" --strictPort
 }
 
 # ─── Launch ─────────────────────────────────────────────────────────────

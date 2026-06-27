@@ -118,6 +118,10 @@ export function App() {
   useEffect(() => {
     if (!currentWSClient) return;
     const ws = currentWSClient;
+    // Mark the store as backend-connected up front; the polling
+    // effect below will flip it back to false if the socket
+    // drops.
+    useLiveStore.getState().setBackendConnected(ws.getState() === 'open');
     // Subscribe to the topics that the UI cares about.
     ws.subscribe(['mempool', 'liquidation_event', 'amm_sync']);
 
@@ -173,9 +177,19 @@ export function App() {
     ws.setOnMessage(onMsg);
     ws.start();
 
+    // Poll the WS client's `getState()` once a second and
+    // mirror it into the live store so the UI badge can flip
+    // between "Backend: live" and "Backend: reconnecting…"
+    // without waiting for a fresh message.
+    const id = window.setInterval(() => {
+      useLiveStore.getState().setBackendConnected(ws.getState() === 'open');
+    }, 1000);
+
     return () => {
+      window.clearInterval(id);
       ws.stop();
       ws.setOnMessage(null);
+      useLiveStore.getState().setBackendConnected(false);
     };
   }, []);
 
