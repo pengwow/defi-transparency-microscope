@@ -45,6 +45,18 @@ FRONTEND_HOST="${FRONTEND_HOST:-127.0.0.1}"
 
 START_BACKEND=1
 START_FRONTEND=1
+# `e2e`  → boot the offline e2e stub (`dtm-e2e-server`), which wires
+#           canned PoolFetcher / TransactionFetcher / LendingFetcher /
+#           LpFetcher onto `app.state` so the chain-data endpoints
+#           return deterministic data without a real Ethereum RPC.
+#           This is the default for developer convenience — most
+#           sandboxes and laptops don't have a usable mainnet RPC,
+#           and the production server (`main.py`) intentionally
+#           does NOT install those fetchers, so booting it without
+#           one would 500 every /api/v1/pools call.
+# `prod` → boot the real `python -m dtm_backend.main` server, which
+#           needs `RPC_URL` set and a reachable Ethereum node.
+BACKEND_MODE="${BACKEND_MODE:-e2e}"
 
 # ─── Arg parsing ─────────────────────────────────────────────────────────
 print_usage() {
@@ -68,6 +80,7 @@ Environment overrides:
   BACKEND_PORT, FRONTEND_PORT, BACKEND_HOST, FRONTEND_HOST, PY,
   SKIP_PY_CHECK, SKIP_PORT_CHECK, KEEP_LOGS,
   SKIP_INSTALL=1             skip the auto-install (CI / sandboxed use)
+  BACKEND_MODE               "e2e" (default, offline stub) | "prod" (real RPC)
   VITE_USE_BACKEND           default "true"  (set to "false" for offline demo)
   VITE_BACKEND_URL           default "http://${BACKEND_HOST}:${BACKEND_PORT}"
 USAGE
@@ -82,6 +95,12 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+case "${BACKEND_MODE}" in
+  e2e|prod) ;;
+  *) printf "invalid BACKEND_MODE=%s (expected: e2e|prod)\n" "${BACKEND_MODE}" >&2
+     exit 2 ;;
+esac
 
 if [ "${START_BACKEND}" -eq 0 ] && [ "${START_FRONTEND}" -eq 0 ]; then
   printf "refusing to start: --backend-only and --frontend-only are mutually exclusive\n" >&2
@@ -225,11 +244,17 @@ if not (3, 12) <= sys.version_info < (3, 15):
     sys.exit(1)
 PY
     ensure_backend_deps
-    log "backend launcher: ${PY} -m dtm_backend.main"
+    case "${BACKEND_MODE}" in
+      e2e)  log "backend launcher: ${PY} -m dtm_backend.scripts.e2e_server (offline stub)" ;;
+      prod) log "backend launcher: ${PY} -m dtm_backend.main (real RPC, RPC_URL=${RPC_URL:-<unset>})" ;;
+    esac
   else
     PY="${PY:-python3}"
   fi
-  BACKEND_CMD=("${PY}" -m dtm_backend.main)
+  case "${BACKEND_MODE}" in
+    e2e)  BACKEND_CMD=("${PY}" -m dtm_backend.scripts.e2e_server) ;;
+    prod) BACKEND_CMD=("${PY}" -m dtm_backend.main) ;;
+  esac
   check_port_free "${BACKEND_HOST}" "${BACKEND_PORT}" "backend" || true
 fi
 
@@ -240,7 +265,7 @@ fi
 
 # ─── Banner ──────────────────────────────────────────────────────────────
 log "starting DTM dev stack"
-[ "${START_BACKEND}" -eq 1 ]  && log "  backend  → http://${BACKEND_HOST}:${BACKEND_PORT}"
+[ "${START_BACKEND}" -eq 1 ]  && log "  backend  → http://${BACKEND_HOST}:${BACKEND_PORT}  (mode=${BACKEND_MODE})"
 [ "${START_FRONTEND}" -eq 1 ] && log "  frontend → http://${FRONTEND_HOST}:${FRONTEND_PORT}"
 log "press Ctrl+C to stop everything"
 
@@ -314,11 +339,18 @@ launch_backend() {
   local logfile
   logfile="$(mktemp -t dev-backend.XXXXXX.log)"
   BACKEND_LOG="${logfile}"
+  # The two backend modes consume different env vars for the
+  # listen address: the e2e stub honours E2E_HOST/E2E_PORT, the
+  # production server honours HOST/PORT.  We export both so a
+  # single launch_backend works for either backend without the
+  # caller having to know.
   launch_service "backend" "BACKEND_PID" "${logfile}" \
     "BACKEND_TAIL_PID" "${backend_prefix}" \
     env \
       HOST="${BACKEND_HOST}" \
       PORT="${BACKEND_PORT}" \
+      E2E_HOST="${BACKEND_HOST}" \
+      E2E_PORT="${BACKEND_PORT}" \
       PYTHONPATH="${REPO_ROOT}/backend/src${PYTHONPATH:+:${PYTHONPATH}}" \
       "${BACKEND_CMD[@]}"
 }

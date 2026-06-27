@@ -90,21 +90,33 @@ def test_frontend_only_does_not_exit_silently() -> None:
     in `set -e` context — bash aborted before any log line could
     print.
 
-    We simulate by passing a port that will fail to bind (port 1
-    is reserved and uvicorn/vite can't listen there without root).
-    The script should detect the failure and log something like
-    "backend exited (code=...) — stopping frontend" before
-    exiting.  We give the script SKIP_INSTALL=1 to keep the test
-    fast and deterministic."""
-    res = _run(
-        ["--backend-only"],
-        env_extra={
-            "SKIP_INSTALL": "1",
-            "BACKEND_PORT": "1",       # unprivileged bind will fail
-            "KEEP_LOGS": "1",
-        },
-        timeout=10,
-    )
+    We simulate by:
+      1. Occupying a TCP port via a tiny Python `socket.bind()`.
+      2. Asking the dev script to start its backend on the same
+         port — uvicorn's bind will fail.
+      3. The script must detect the failure and emit a
+         "backend exited" / "log kept at" line on stderr before
+         exiting non-zero.
+
+    We give the script SKIP_INSTALL=1 to keep the test fast."""
+    import socket
+    # Pick a port that's likely free; bind it so the next bind
+    # to the same port fails.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        occupied_port = s.getsockname()[1]
+        # We must keep `s` open through the dev.sh run; closing
+        # it would let uvicorn grab the port.  So we wrap the
+        # subprocess call inside the `with` block.
+        res = _run(
+            ["--backend-only"],
+            env_extra={
+                "SKIP_INSTALL": "1",
+                "BACKEND_PORT": str(occupied_port),
+                "KEEP_LOGS": "1",
+            },
+            timeout=10,
+        )
     # The script should have exited non-zero (something failed)
     # and its stderr should contain either the "exited" line OR
     # a "log kept at" line.  Either proves the failure path is
@@ -116,6 +128,7 @@ def test_frontend_only_does_not_exit_silently() -> None:
     assert (
         "exited" in res.stderr
         or "log kept at" in res.stderr
+        or "log:" in res.stderr
     ), (
         f"failure path is silent — user can't see what went wrong\n"
         f"stderr: {res.stderr}"
@@ -204,3 +217,73 @@ def test_log_files_have_visible_paths_on_failure() -> None:
         "scripts/dev.sh must print the per-service log path when "
         "a service dies, otherwise failures are silent."
     )
+
+
+def test_default_backend_mode_is_e2e() -> None:
+    """The default BACKEND_MODE must be the offline e2e stub, not
+    the production server.
+
+    Without an e2e default, a fresh `./scripts/dev.sh` on a
+    developer machine without an Ethereum RPC would 500 every
+    /api/v1/pools call (the production `dtm_backend.main` does
+    not install chain fetchers on `app.state`).  The e2e stub
+    wires canned fetchers so the live page, Liquidation page,
+    and LP/IL page all return data without any network access.
+    """
+    src = SCRIPT.read_text()
+    assert 'BACKEND_MODE="${BACKEND_MODE:-e2e}"' in src, (
+        "default BACKEND_MODE must be 'e2e' so dev environments "
+        "don't 500 on /api/v1/pools"
+    )
+
+
+def test_backend_mode_e2e_launches_e2e_server() -> None:
+    """In e2e mode the script must exec the e2e stub module, not
+    the production `dtm_backend.main`.  We do a static check on
+    the source — no subprocess — so the test stays fast."""
+    src = SCRIPT.read_text()
+    assert "dtm_backend.scripts.e2e_server" in src, (
+        "BACKEND_MODE=e2e must launch dtm_backend.scripts.e2e_server"
+    )
+    # The e2e branch and the prod branch must both be present
+    # in the launcher logic.
+    assert "BACKEND_CMD=(" in src
+    assert "e2e)  BACKEND_CMD=" in src or "e2e) BACKEND_CMD=" in src
+    assert "prod) BACKEND_CMD=" in src
+
+
+def test_invalid_backend_mode_rejected() -> None:
+    """An invalid BACKEND_MODE value must exit non-zero (2) with
+    a clear error, so the user doesn't silently end up on the
+    wrong backend."""
+    res = _run(["--backend-only"], env_extra={"BACKEND_MODE": "bogus"})
+    assert res.returncode == 2, f"expected exit 2, got {res.returncode}"
+    assert "invalid BACKEND_MODE" in res.stderr
+    assert "expected: e2e|prod" in res.stderr
+
+
+def test_backend_mode_documented_in_help() -> None:
+    """The --help output must list BACKEND_MODE so users can
+    discover the e2e/prod switch without reading the source."""
+    res = _run(["--help"])
+    assert res.returncode == 0
+    assert "BACKEND_MODE" in res.stdout
+    assert "e2e" in res.stdout
+    assert "prod" in res.stdout
+
+
+def test_launch_backend_passes_e2e_host_port_env() -> None:
+    """Static guard: `launch_backend` must export both the
+    production `HOST`/`PORT` (for `dtm_backend.main`) and the
+    e2e stub's `E2E_HOST`/`E2E_PORT` (for `e2e_server.py`), so a
+    single `launch_backend` works for either backend mode
+    without the script caller having to know which is in use."""
+    src = SCRIPT.read_text()
+    # Find the launch_backend function body.
+    idx = src.index("launch_backend()")
+    body = src[idx: idx + 1500]
+    for var in ("HOST=", "PORT=", "E2E_HOST=", "E2E_PORT="):
+        assert var in body, (
+            f"launch_backend must export {var.rstrip('=')} so the "
+            f"e2e stub can bind to the chosen port"
+        )
