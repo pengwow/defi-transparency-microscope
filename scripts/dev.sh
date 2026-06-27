@@ -330,16 +330,22 @@ trap 'on_signal TERM' TERM
 trap on_exit EXIT
 
 # ─── Wait for the first one to die ───────────────────────────────────────
-# If both are running, block until either exits; propagate its
-# exit code and tear the other one down.  If only one is running,
-# just wait for it.
+# If both are running, poll their liveness until either exits;
+# propagate its exit code and tear the other one down.  If only
+# one is running, just wait for it.  We deliberately avoid
+# `wait -n` here because it's bash-4.3+ only and not available
+# in POSIX mode — a portable `kill -0` poll is robust everywhere.
 EXIT_CODE=0
 if [ "${START_BACKEND}" -eq 1 ] && [ "${START_FRONTEND}" -eq 1 ]; then
-  set +e
-  wait -n -p first_pid
-  set -e
-  # The job that woke us up may be a tail/sed helper, not the
-  # service itself, so we probe service liveness directly.
+  # Poll until one of the two service PIDs disappears.  The tail
+  # followers and the subshell wrappers are also children of
+  # this script, but we only care about the service PIDs because
+  # those are the ones whose exit code we want to propagate.
+  while :; do
+    if ! kill -0 "${BACKEND_PID}" 2>/dev/null; then break; fi
+    if ! kill -0 "${FRONTEND_PID}" 2>/dev/null; then break; fi
+    sleep 0.2
+  done
   be_alive=0; fe_alive=0
   kill -0 "${BACKEND_PID}"  2>/dev/null && be_alive=1
   kill -0 "${FRONTEND_PID}" 2>/dev/null && fe_alive=1
@@ -355,26 +361,10 @@ if [ "${START_BACKEND}" -eq 1 ] && [ "${START_FRONTEND}" -eq 1 ]; then
     log "frontend exited (code=${EXIT_CODE}) — stopping backend"
     shutdown
   else
-    # Either both services are still alive (a tail/sed helper
-    # exited prematurely), or both are dead (a race).  In the
-    # former case we fall through to the signal handler with
-    # no clean exit code; in the latter we reap both.
-    if [ "${be_alive}" -eq 0 ] && [ "${fe_alive}" -eq 0 ]; then
-      wait "${BACKEND_PID}";  be_exit=$?
-      wait "${FRONTEND_PID}"; fe_exit=$?
-      EXIT_CODE=$(( be_exit != 0 ? be_exit : fe_exit ))
-    else
-      log "an output helper exited unexpectedly; waiting for services to settle…"
-      # Wait for whichever service dies next, with a short cap.
-      for _ in 1 2 3 4 5 6 7 8 9 10; do
-        if ! kill -0 "${BACKEND_PID}" 2>/dev/null \
-          || ! kill -0 "${FRONTEND_PID}" 2>/dev/null; then
-          break
-        fi
-        sleep 0.5
-      done
-      EXIT_CODE=0
-    fi
+    # Both dead (race) — reap both for the exit code.
+    wait "${BACKEND_PID}";  be_exit=$?
+    wait "${FRONTEND_PID}"; fe_exit=$?
+    EXIT_CODE=$(( be_exit != 0 ? be_exit : fe_exit ))
   fi
 elif [ "${START_BACKEND}" -eq 1 ]; then
   set +e
