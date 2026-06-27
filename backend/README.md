@@ -42,6 +42,25 @@ uv sync --extra dev
 uv run dtm-backend
 ```
 
+### Running backend + frontend together
+
+Use the repo-level dev launcher to start both stacks in one
+terminal with colour-coded output and a single Ctrl+C shutdown:
+
+```bash
+# from the repo root
+./scripts/dev.sh                # both backend (8000) + frontend (5173)
+./scripts/dev.sh --backend-only # only the FastAPI server
+./scripts/dev.sh --frontend-only
+BACKEND_PORT=9000 FRONTEND_PORT=5174 ./scripts/dev.sh
+```
+
+Each service's output is prefixed (`[backend] …` / `[frontend] …`)
+so the two streams stay easy to tell apart, and a single Ctrl+C
+sends SIGTERM to both process trees (with a 5s grace period
+before SIGKILL).  Set `KEEP_LOGS=1` to retain the per-service
+log files in `/tmp/dev-{backend,frontend}.*.log` for debugging.
+
 ## Layout
 
 ```
