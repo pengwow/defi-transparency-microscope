@@ -72,4 +72,12 @@ describe('ReportPage', () => {
     const items = container.querySelectorAll('[data-testid^="strategy-pie-legend-"]');
     expect(items.length).toBe(5);
   });
+
+  // Regression for the ".dtm-page hides every page root" bug.
+  it('uses the .dtm-page shell class on its root div (visibility contract)', () => {
+    const { container } = render(<ReportPage />);
+    const root = screen.getByTestId('report-page');
+    expect(root.className).toContain('dtm-page');
+    expect(container.firstChild).toBe(root);
+  });
 });

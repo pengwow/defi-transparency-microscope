@@ -97,6 +97,44 @@ describe('App', () => {
     expect(screen.getByTestId('amm-disturbance-canvas')).toBeInTheDocument();
   });
 
+  // Full-tab route smoke: every nav tab must mount *its* page root
+  // and at least one piece of page-specific content below the
+  // header.  Catches CSS-hides-everything regressions for any
+  // page, not just Liquidation.  NavTabs is the canonical entry
+  // point, so we drive it via getByRole('tab', { name }) — same
+  // surface real users see.
+  it('mounts every nav-tab page with page-specific content (full route smoke)', async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByTestId('app-header')).toBeInTheDocument();
+    });
+
+    // Use the exact full label of each tab (emoji + text) so we
+    // don't accidentally match sibling tabs (e.g. "教学实验" vs
+    // "实验切片" — both contain "实验").  See NavTabs.tsx for the
+    // canonical labels.
+    const cases: Array<{ tab: RegExp; expectTestIds: string[] }> = [
+      { tab: /📡 实时采样/,        expectTestIds: ['live-amm-panel', 'mempool-panel'] },
+      { tab: /🔬 实验切片/,        expectTestIds: ['fork-experiment-grid', 'fork-params-panel'] },
+      { tab: /⚡ 清算/,            expectTestIds: ['liquidation-panorama-container'] },
+      { tab: /🌊 LP\/IL/,          expectTestIds: ['lpil-grid', 'lpil-params-panel'] },
+      { tab: /🎓 教学实验/,        expectTestIds: ['education-grid', 'edu-params-panel'] },
+      { tab: /📊 报告/,            expectTestIds: ['report-grid', 'report-overview-panel'] },
+    ];
+
+    for (const { tab, expectTestIds } of cases) {
+      fireEvent.click(screen.getByRole('tab', { name: tab }));
+      for (const id of expectTestIds) {
+        await waitFor(
+          () => {
+            expect(screen.getByTestId(id)).toBeInTheDocument();
+          },
+          { timeout: 2000 },
+        );
+      }
+    }
+  });
+
   it('populates the live store on mount', async () => {
     render(<App />);
     await waitFor(() => {

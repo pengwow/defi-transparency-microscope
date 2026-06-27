@@ -12,6 +12,8 @@
     "test:watch": "vitest --exclude '**/*.integration.test.ts'",
     "test:integration": "vitest run src/services/__tests__/httpApi.integration.test.ts",
     "test:all": "pnpm test && pnpm test:integration",
+    "smoke:visual": "node scripts/visual-smoke.mjs",
+    "smoke:visual:headed": "HEADED=1 node scripts/visual-smoke.mjs",
     "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
     "typecheck": "tsc --noEmit"

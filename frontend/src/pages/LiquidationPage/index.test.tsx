@@ -49,4 +49,19 @@ describe('LiquidationPage (dual views)', () => {
     fireEvent.click(screen.getByTestId('liquidation-mode-panorama'));
     expect(screen.getByTestId('liquidation-panorama-container')).toBeInTheDocument();
   });
+
+  // Regression for the ".dtm-page hides every page root" bug:
+  // the page root used to be hidden by `.dtm-page { display: none }`
+  // because the Liquidation page never opted in to `.is-active`.
+  // This test guards the className contract: every page that uses
+  // the `.dtm-page` shell class must keep it on its root.
+  it('uses the .dtm-page shell class on its root div (visibility contract)', () => {
+    const { container } = render(<LiquidationPage />);
+    const root = screen.getByTestId('liquidation-page');
+    expect(root.className).toContain('dtm-page');
+    // Sanity: the children are actually inside the page root, not
+    // floating outside it (which would let CSS hiding of the root
+    // be silently bypassed).
+    expect(container.firstChild).toBe(root);
+  });
 });
