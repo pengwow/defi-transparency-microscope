@@ -34,6 +34,10 @@ venv/
 env/
 ENV/
 
+# uv lockfile (the project tracks its dependencies via pyproject.toml
+# only — regenerate with `uv sync` if you need a local venv)
+uv.lock
+
 # IDE
 .idea/
 .vscode/
