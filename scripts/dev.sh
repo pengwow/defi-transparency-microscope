@@ -55,12 +55,19 @@ Usage: scripts/dev.sh [--backend-only | --frontend-only]
   terminal.  Each process has its stdout/stderr prefixed with a
   colour-coded tag so the two streams are easy to tell apart.
 
+  The script auto-installs missing dependencies on first run:
+    * Backend: creates backend/.venv (uv sync if available, else
+      python -m venv + pip install -e ".[dev]")
+    * Frontend: runs `pnpm install` in frontend/
+
   --backend-only     only start the FastAPI backend
   --frontend-only    only start the Vite frontend
   -h, --help         show this help
 
-Environment overrides: BACKEND_PORT, FRONTEND_PORT, BACKEND_HOST,
-FRONTEND_HOST, PY, SKIP_PY_CHECK, SKIP_PORT_CHECK, KEEP_LOGS.
+Environment overrides:
+  BACKEND_PORT, FRONTEND_PORT, BACKEND_HOST, FRONTEND_HOST, PY,
+  SKIP_PY_CHECK, SKIP_PORT_CHECK, KEEP_LOGS,
+  SKIP_INSTALL=1   skip the auto-install (CI / sandboxed use)
 USAGE
 }
 
@@ -129,6 +136,71 @@ PY
   return 0
 }
 
+# ─── Auto-install helpers ───────────────────────────────────────────────
+# If the chosen Python can't import `dtm_backend`, we either
+# point at an existing `backend/.venv` (if one is already
+# provisioned) or create one on the fly and `pip install -e
+# .[dev]`.  We prefer `uv sync` when uv is available since it's
+# faster and produces a deterministic lock.
+ensure_backend_deps() {
+  if [ "${SKIP_INSTALL:-0}" = "1" ]; then
+    return 0
+  fi
+  if "${PY}" -c "import dtm_backend" >/dev/null 2>&1; then
+    return 0
+  fi
+  # Reuse an existing venv if one is already provisioned and its
+  # python can import dtm_backend.  This handles the common case
+  # where someone has run `uv sync` separately.
+  if [ -x "${REPO_ROOT}/backend/.venv/bin/python" ]; then
+    local vpy="${REPO_ROOT}/backend/.venv/bin/python"
+    if "${vpy}" -c "import dtm_backend" >/dev/null 2>&1; then
+      log "using existing backend/.venv (dtm_backend importable)"
+      PY="${vpy}"
+      return 0
+    fi
+  fi
+  log "backend deps missing — installing…"
+  if command -v uv >/dev/null 2>&1; then
+    log "  using: uv sync --extra dev (in backend/)"
+    ( cd "${REPO_ROOT}/backend" && uv sync --extra dev ) \
+      || die "uv sync failed; rerun with SKIP_INSTALL=1 to bypass"
+    if [ -x "${REPO_ROOT}/backend/.venv/bin/python" ]; then
+      PY="${REPO_ROOT}/backend/.venv/bin/python"
+    fi
+  else
+    if [ ! -x "${REPO_ROOT}/backend/.venv/bin/python" ]; then
+      log "  creating venv at backend/.venv"
+      "${PY}" -m venv "${REPO_ROOT}/backend/.venv" \
+        || die "venv creation failed"
+    fi
+    local vpy="${REPO_ROOT}/backend/.venv/bin/python"
+    log "  using: pip install -e .[dev] (in backend/)"
+    ( cd "${REPO_ROOT}/backend" && "${vpy}" -m pip install -e ".[dev]" ) \
+      || die "pip install failed; rerun with SKIP_INSTALL=1 to bypass"
+    PY="${vpy}"
+  fi
+  # Final sanity check — surface a clear error if the install
+  # succeeded but dtm_backend still isn't importable.
+  "${PY}" -c "import dtm_backend" >/dev/null 2>&1 \
+    || die "dtm_backend still not importable from ${PY} after install"
+  log "backend deps installed"
+}
+
+# Run `pnpm install` if frontend/node_modules is missing.
+ensure_frontend_deps() {
+  if [ "${SKIP_INSTALL:-0}" = "1" ]; then
+    return 0
+  fi
+  if [ -d "${REPO_ROOT}/frontend/node_modules" ]; then
+    return 0
+  fi
+  log "frontend/node_modules missing — running pnpm install…"
+  ( cd "${REPO_ROOT}/frontend" && pnpm install ) \
+    || die "pnpm install failed; rerun with SKIP_INSTALL=1 to bypass"
+  log "frontend deps installed"
+}
+
 if [ "${START_BACKEND}" -eq 1 ]; then
   if [ "${SKIP_PY_CHECK:-0}" != "1" ]; then
     # Honour the user-supplied PY if it's already set and runnable.
@@ -150,11 +222,8 @@ import sys
 if not (3, 12) <= sys.version_info < (3, 15):
     sys.exit(1)
 PY
-    if "${PY}" -c "import dtm_backend" >/dev/null 2>&1; then
-      log "backend launcher: ${PY} -m dtm_backend.main"
-    else
-      log "backend launcher: ${PY} -m dtm_backend.main (PYTHONPATH fallback)"
-    fi
+    ensure_backend_deps
+    log "backend launcher: ${PY} -m dtm_backend.main"
   else
     PY="${PY:-python3}"
   fi
@@ -163,6 +232,7 @@ PY
 fi
 
 if [ "${START_FRONTEND}" -eq 1 ]; then
+  ensure_frontend_deps
   check_port_free "${FRONTEND_HOST}" "${FRONTEND_PORT}" "frontend" || true
 fi
 

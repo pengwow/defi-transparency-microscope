@@ -82,18 +82,44 @@ def test_backend_only_and_frontend_only_are_mutually_exclusive() -> None:
     shutil.which("node") is None or shutil.which("pnpm") is None,
     reason="node/pnpm not available",
 )
-def test_frontend_only_fails_cleanly_when_node_modules_missing() -> None:
-    """`--frontend-only` should at least get past preflight checks
-    and attempt to launch pnpm — even if vite later fails because
-    node_modules isn't installed, the preflight banner should print."""
-    res = _run(["--frontend-only"], env_extra={"KEEP_LOGS": "1"}, timeout=8)
-    # Either the script launched vite (which may or may not crash
-    # depending on node_modules state) and was killed by the
-    # timeout, or it bailed early because pnpm exec failed.
-    # We only assert the *banner* lines were printed, not the
-    # exit code (which is environment-dependent).
-    assert "starting DTM dev stack" in res.stderr
-    assert "frontend" in res.stderr
+def test_frontend_only_does_not_exit_silently() -> None:
+    """Regression test for the "silent exit" bug: when a service
+    dies the script must log WHICH one died AND where its log
+    file lives, so the user can debug.  Earlier the script
+    would silently exit on a service failure because `wait` was
+    in `set -e` context — bash aborted before any log line could
+    print.
+
+    We simulate by passing a port that will fail to bind (port 1
+    is reserved and uvicorn/vite can't listen there without root).
+    The script should detect the failure and log something like
+    "backend exited (code=...) — stopping frontend" before
+    exiting.  We give the script SKIP_INSTALL=1 to keep the test
+    fast and deterministic."""
+    res = _run(
+        ["--backend-only"],
+        env_extra={
+            "SKIP_INSTALL": "1",
+            "BACKEND_PORT": "1",       # unprivileged bind will fail
+            "KEEP_LOGS": "1",
+        },
+        timeout=10,
+    )
+    # The script should have exited non-zero (something failed)
+    # and its stderr should contain either the "exited" line OR
+    # a "log kept at" line.  Either proves the failure path is
+    # now observable to the user.
+    assert res.returncode != 0, (
+        f"expected non-zero exit, got {res.returncode}\n"
+        f"stdout: {res.stdout}\nstderr: {res.stderr}"
+    )
+    assert (
+        "exited" in res.stderr
+        or "log kept at" in res.stderr
+    ), (
+        f"failure path is silent — user can't see what went wrong\n"
+        f"stderr: {res.stderr}"
+    )
 
 
 def test_script_works_under_bash_posix() -> None:
@@ -125,8 +151,6 @@ def test_script_avoids_posix_only_wait_flags() -> None:
     invocation (i.e. starts with `wait ` or follows a `;` / `&&` /
     `||` / `|` / `(` boundary).  Catch this at review time so we
     don't regress."""
-    import re
-
     src = SCRIPT.read_text()
     # Match `wait` followed by whitespace and `-n`, but not in a
     # comment.  We strip comment lines first to avoid false
@@ -139,4 +163,44 @@ def test_script_avoids_posix_only_wait_flags() -> None:
     assert "wait -n" not in code, (
         "scripts/dev.sh invokes `wait -n`, which is unavailable in "
         "POSIX mode.  Use a `kill -0` poll loop instead."
+    )
+
+
+def test_script_documents_skip_install() -> None:
+    """The auto-install feature must be discoverable — both in
+    --help output and as an env var hook.  We assert the doc
+    string contains the SKIP_INSTALL name and that the help text
+    mentions auto-install behaviour, so future maintainers don't
+    accidentally remove this contract."""
+    res = _run(["--help"])
+    assert "auto-install" in res.stdout.lower() or "auto install" in res.stdout.lower(), (
+        "--help output should describe the auto-install behaviour"
+    )
+    assert "SKIP_INSTALL" in res.stdout
+
+    src = SCRIPT.read_text()
+    assert "SKIP_INSTALL" in src
+    # The two install functions must both honour SKIP_INSTALL.
+    for fn in ("ensure_backend_deps", "ensure_frontend_deps"):
+        assert fn in src
+        # Sanity: the function body should reference SKIP_INSTALL.
+        fn_idx = src.index(f"{fn}()")
+        fn_body = src[fn_idx: fn_idx + 600]
+        assert "SKIP_INSTALL" in fn_body, (
+            f"{fn} does not honour SKIP_INSTALL"
+        )
+
+
+def test_log_files_have_visible_paths_on_failure() -> None:
+    """Static guard: when a service dies, the script must log the
+    per-service log file path so the user can debug.  Otherwise
+    the failure is silent (the symptom of the bug that prompted
+    this whole refactor)."""
+    src = SCRIPT.read_text()
+    # The asymmetric "frontend died" branch must mention both the
+    # exit code AND the log file path.  We assert the string
+    # "log:" appears inside that branch.
+    assert "frontend log:" in src, (
+        "scripts/dev.sh must print the per-service log path when "
+        "a service dies, otherwise failures are silent."
     )
