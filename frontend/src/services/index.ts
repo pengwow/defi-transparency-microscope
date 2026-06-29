@@ -30,8 +30,32 @@ export const currentWSClient: WsClient | null = useBackend
   ? new WsClient({ url: wsBaseUrl })
   : null;
 
+/**
+ * One-line banner printed at module-load so the developer can see
+ * at a glance whether the UI is talking to the real backend or to
+ * the in-memory mock.  This is the single most useful diagnostic
+ * when the browser console shows CORS errors — if the banner says
+ * `data=mock` the frontend is *not* hitting the backend at all
+ * (and CORS is irrelevant), and if it says `data=backend <url>`
+ * you can immediately tell whether the URL matches the running
+ * FastAPI process.
+ */
+const dataLabel = useBackend ? `backend ${baseUrl}` : 'mock';
+// eslint-disable-next-line no-console
+console.info(
+  `%c[dtm-frontend] data=${dataLabel}  ws=${useBackend ? wsBaseUrl : 'off'}`,
+  'color:#5bd17b;font-weight:bold',
+);
+
 export { MockAPI, HttpAPI };
 export { WsClient };
 export type { WsMessageEnvelope, WsState };
 export { HttpApiError, HttpNotFoundError } from './httpApi';
 export type { DataAPI, ExperimentPreset, IlExperimentInput, AttributionExperimentInput } from './api';
+
+/** Exposed for the App.tsx reachability probe. */
+export const backendConfig = Object.freeze({
+  useBackend,
+  baseUrl,
+  wsBaseUrl,
+});
