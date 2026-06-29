@@ -12,7 +12,6 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import {
   ErrorBoundary,
   LoadingScreen,
-  RealtimeClock,
   Panel,
   Header,
   ModeBar,
@@ -92,35 +91,6 @@ describe('LoadingScreen', () => {
     // Custom subtitle override.
     rerender(<LoadingScreen subtitle="正在初始化…" />);
     expect(screen.getByText('正在初始化…')).toBeInTheDocument();
-  });
-});
-
-describe('RealtimeClock', () => {
-  it('renders a floating widget with time, date, and block #', () => {
-    render(<RealtimeClock />);
-    const el = screen.getByTestId('realtime-clock');
-    expect(el.tagName.toLowerCase()).toBe('div');
-    expect(el.className).toContain('dtm-rtc-widget');
-    // Time, date, and block number are all rendered.
-    expect(screen.getByTestId('realtime-clock-time').textContent).toMatch(/^\d{2}:\d{2}(:\d{2})?$/);
-    expect(screen.getByTestId('realtime-clock-date').textContent).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(screen.getByTestId('realtime-clock-block').textContent).toMatch(/^Block\s*#\s*[\d,]+$/);
-  });
-
-  it('auto-increments the block number every blockIntervalMs', () => {
-    vi.useFakeTimers();
-    render(<RealtimeClock blockIntervalMs={12_000} />);
-    const blockEl = screen.getByTestId('realtime-clock-block');
-    const initial = blockEl.textContent;
-    act(() => {
-      vi.advanceTimersByTime(12_000);
-    });
-    expect(blockEl.textContent).not.toBe(initial);
-    // The new block number should be one greater than the original.
-    const initialNum = Number((initial ?? '').replace(/[^\d]/g, ''));
-    const nextNum = Number((blockEl.textContent ?? '').replace(/[^\d]/g, ''));
-    expect(nextNum).toBe(initialNum + 1);
-    vi.useRealTimers();
   });
 });
 
@@ -324,23 +294,6 @@ describe('ExplainBox', () => {
       </ExplainBox>,
     );
     expect(screen.getByText('explanation body')).toBeInTheDocument();
-  });
-});
-
-describe('RealtimeClock time advancement', () => {
-  it('updates the time span over time', () => {
-    vi.useFakeTimers();
-    render(<RealtimeClock />);
-    const el = screen.getByTestId('realtime-clock-time');
-    const initial = el.textContent;
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
-    // Note: the value may or may not have changed depending on the second boundary.
-    // The test passes as long as the component re-renders without crashing.
-    expect(el.textContent).toMatch(/^\d{2}:\d{2}:\d{2}$/);
-    expect(initial).toMatch(/^\d{2}:\d{2}:\d{2}$/);
-    vi.useRealTimers();
   });
 });
 

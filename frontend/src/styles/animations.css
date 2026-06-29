@@ -8,7 +8,7 @@
  * 第 9-326 行 CSS 块）：`dtm-loadingPulse`、`dtm-logoPulse`、
  * `dtm-demoPulse`、`dtm-pdot`、`dtm-fadeIn`、`dtm-fadeInUp`、
  * `dtm-loadProgress`、`dtm-redAlertPulse`、`dtm-livePulse`、
- * `dtm-rtcBlink`、`dtm-laneIn`、`dtm-flashIn`、`dtm-scanMove`、
+ * `dtm-laneIn`、`dtm-flashIn`、`dtm-scanMove`、
  * `dtm-slideIn`、`dtm-stepGlow`。
  */
 
@@ -94,11 +94,6 @@
 @keyframes dtm-livePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.3; transform: scale(0.7); }
-}
-
-@keyframes dtm-rtcBlink {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.3; }
 }
 
 @keyframes dtm-laneIn {

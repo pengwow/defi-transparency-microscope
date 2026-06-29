@@ -5,7 +5,7 @@
  *   1. Initial data load (live store, position store, experiment store)
  *   2. The full demo chrome: ParticleBackground + LensTransition
  *   3. The Header (with 一键实验 pill) / NavTabs / page router
- *   4. The floating RealtimeClock + ModeBar in the header right slot
+ *   4. The ModeBar in the header right slot
  *   5. The FlashAlert overlay with "放入显微镜" action
  *   6. An ErrorBoundary wrapping the whole tree
  *
@@ -22,7 +22,6 @@ import {
   ModeBar,
   NavTabs,
   ParticleBackground,
-  RealtimeClock,
   DemoOverlay,
 } from '@/components/common';
 import { useExperimentStore } from '@/store/experimentStore';
@@ -209,12 +208,7 @@ export function App() {
           <Header
             onStartDemo={runDemoHandler('auto')}
             demoRunning={demoRunning}
-            right={
-              <>
-                <RealtimeClock />
-                <ModeBar value={mode} onChange={setMode} />
-              </>
-            }
+            right={<ModeBar value={mode} onChange={setMode} />}
           />
           <NavTabs active={page} onSelect={setPage} />
           <main className="dtm-app-main" data-testid="app-main">
