@@ -12,9 +12,6 @@ export type { ErrorBoundaryProps } from './ErrorBoundary';
 export { LoadingScreen } from './LoadingScreen';
 export type { LoadingScreenProps } from './LoadingScreen';
 
-export { RealtimeClock } from './RealtimeClock';
-export type { RealtimeClockProps } from './RealtimeClock';
-
 export { Panel } from './Panel';
 export type { PanelProps } from './Panel';
 
