@@ -6,12 +6,20 @@
  * timestamp.  Hovering the row reveals a "🔬 放入显微镜" button that
  * invokes the `onEnterMicroscope` prop.
  *
- * On a 2500ms interval the component generates a new transaction
- * with `makeTransaction` and pushes it onto the live store.  When
- * the new transaction is an attack type (sandwich / jit), there's a
- * 30% chance the component surfaces a `pushFlashAlert` to the UI
- * store — unless the demo is currently running (we don't want to
- * spam the user with attack alerts mid-tour).
+ * Data source priority:
+ *   1. **Backend mode** (`useLiveStore.backendConnected === true`):
+ *      the list is driven exclusively by the `mempool_tx` WebSocket
+ *      topic that `App.tsx` subscribes to.  We do **not** push any
+ *      fake `makeTransaction()` data, so the user sees real on-chain
+ *      events.
+ *   2. **Mock / disconnected mode**: every 2500ms a fresh
+ *      `makeTransaction()` is pushed onto the live store so the
+ *      panel looks alive.  Sandwich / jit pushes have a 30% chance
+ *      of triggering a `pushFlashAlert`, unless the guided demo is
+ *      running (so we don't spam the user mid-tour).
+ *
+ * The "Backend: live" / "Backend: demo" badge in the panel header
+ * makes the current data source obvious at a glance.
  */
 
 import { useEffect, useRef } from 'react';
@@ -63,12 +71,18 @@ interface MempoolEntry {
 
 export function MempoolLanes({ onEnterMicroscope }: MempoolLanesProps) {
   const mempool = useLiveStore((s) => s.mempool);
+  const backendConnected = useLiveStore((s) => s.backendConnected);
   const pushTx = useLiveStore((s) => s.pushTx);
   const pushFlashAlert = useUiStore((s) => s.pushFlashAlert);
   const onEnterRef = useRef(onEnterMicroscope);
   onEnterRef.current = onEnterMicroscope;
 
   useEffect(() => {
+    // Backend mode: real on-chain `mempool_tx` events drive the
+    // list via `App.tsx`'s WS subscription.  We must NOT push
+    // synthetic data on top, or the user will see a mix of real
+    // and fake transactions that is impossible to distinguish.
+    if (backendConnected) return;
     const id = setInterval(() => {
       const tx = makeTransaction();
       // Map the demo "arbitrage" type into the store's "arb" token.
@@ -99,10 +113,22 @@ export function MempoolLanes({ onEnterMicroscope }: MempoolLanesProps) {
       }
     }, POLL_MS);
     return () => clearInterval(id);
-  }, [pushTx, pushFlashAlert]);
+  }, [backendConnected, pushTx, pushFlashAlert]);
 
   return (
     <div className="dtm-mempool-lanes" data-testid="mempool-lanes">
+      <div
+        className={`dtm-mempool-source ${backendConnected ? 'is-live' : 'is-demo'}`}
+        data-testid="mempool-source-badge"
+        data-source={backendConnected ? 'backend' : 'demo'}
+        title={
+          backendConnected
+            ? '正在接收后端 WebSocket 的 mempool_tx 事件'
+            : 'Mock 模式：每 2.5s 生成一笔假交易'
+        }
+      >
+        {backendConnected ? '● Backend: live' : '○ Backend: demo'}
+      </div>
       {mempool.map((m: MempoolEntry, i: number) => {
         const type = (m.mevType as TxType) ?? 'normal';
         const meta = TX_TYPE_META[type] ?? TX_TYPE_META.normal;
