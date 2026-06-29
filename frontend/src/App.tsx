@@ -28,7 +28,7 @@ import { useExperimentStore } from '@/store/experimentStore';
 import { useLiveStore } from '@/store/liveStore';
 import { usePositionStore } from '@/store/positionStore';
 import { useUiStore, type Page } from '@/store/uiStore';
-import { currentAPI, currentWSClient } from '@/services';
+import { currentAPI, currentWSClient, backendConfig } from '@/services';
 import { runDemo, type DemoKind } from '@/services/demoScript';
 import { spotPriceE18 } from '@/algorithms/cpmm';
 import { EducationPage } from '@/pages/EducationPage';
@@ -75,6 +75,37 @@ export function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // When the developer has set `VITE_USE_BACKEND=true`, do a
+      // cheap `/api/v1/health` probe first so we can surface a
+      // human-readable error if the backend is not actually
+      // listening.  Without this, the only signal is a swarm of
+      // opaque CORS errors in the browser console.
+      if (backendConfig.useBackend) {
+        try {
+          const healthUrl = `${backendConfig.baseUrl}/api/v1/health`;
+          const r = await fetch(healthUrl, { method: 'GET' });
+          if (!r.ok) {
+            throw new Error(`HTTP ${r.status}`);
+          }
+        } catch (err) {
+          if (cancelled) return;
+          const detail = (err as Error).message || 'unreachable';
+          // eslint-disable-next-line no-console
+          console.error(
+            `[dtm-frontend] backend health probe failed at ${backendConfig.baseUrl}/api/v1/health — ${detail}.\n` +
+              `  Most likely causes:\n` +
+              `    1. The FastAPI server is not running (start with \`uv run dtm-backend\` or \`./scripts/dev.sh\`).\n` +
+              `    2. VITE_BACKEND_URL (${backendConfig.baseUrl}) does not match the server's bind address.\n` +
+              `  If both are correct, check the CORS allow-list in the backend config — the default covers 5173/4173/5174/5175/3000/8080.`,
+          );
+          useUiStore.getState().pushAlert({
+            level: 'error',
+            message: `Backend unreachable: ${backendConfig.baseUrl}`,
+          });
+          setReady(true);
+          return;
+        }
+      }
       const [pools, txs, lending, lp, experiments] = await Promise.all([
         api.listPools(),
         api.listTransactions(),

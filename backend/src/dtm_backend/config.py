@@ -12,9 +12,29 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Default CORS allow-list when `CORS_ORIGINS` is unset.
+#
+# Covers the common Vite dev ports (5173 / 4173 / 5174 / 5175) and
+# 127.0.0.1 mirrors so a developer running on any of them won't get
+# a `No 'Access-Control-Allow-Origin' header is present` error.  Add
+# more here if your team standardises on a different port; the env
+# var `CORS_ORIGINS` overrides this list entirely.
 DEFAULT_CORS_ORIGINS: tuple[str, ...] = (
+    # Vite dev server (default).
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    # Vite dev server with --strictPort / multi-instance fallbacks.
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    # Vite `vite preview` (port 4173).
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    # Common alt dev servers (CRA / Next.js / generic dev).
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
 )
 
 # Built-in RPC fallback URLs (used when `RPC_URL` is unset).
