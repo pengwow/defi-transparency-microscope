@@ -21,8 +21,8 @@ import {
   ForkTimeline,
   QuantResults,
   ForkConclusion,
-  type ForkParamsValues,
 } from '@/components/fork';
+import { useForkStore } from '@/store/forkStore';
 import { CompareView } from './CompareView';
 import { ScenarioList } from './ScenarioList';
 import './ForkExperimentPage.css';
@@ -40,11 +40,12 @@ const STEP_DESCRIPTIONS = [
 
 export function ForkExperimentPage() {
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [replayCount, setReplayCount] = useState<number>(0);
-
-  const handleReplay = (_values: ForkParamsValues) => {
-    setReplayCount((n) => n + 1);
-  };
+  // The replay counter is sourced from the `forkStore` so the
+  // sentinel here always reflects the live, store-driven value.
+  // (Before this rewrite, the page kept its own counter that was
+  // never wired to anything visible — clicking "重放仿真" had no
+  // effect on the AMM / Sankey / QuantResults panels.)
+  const replayCount = useForkStore((s) => s.replaySeq);
 
   return (
     <div className="dtm-fork-page" data-testid="fork-experiment-page">
@@ -59,7 +60,7 @@ export function ForkExperimentPage() {
         {/* LEFT: controls */}
         <div className="dtm-fork-col-left">
           <Panel title="仿真参数" testId="fork-params-panel">
-            <ForkParams onReplay={handleReplay} testId="fork-params" />
+            <ForkParams testId="fork-params" />
           </Panel>
           <Panel title="步进控制" testId="step-controls-panel">
             <StepControls

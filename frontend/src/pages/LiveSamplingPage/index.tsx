@@ -13,7 +13,7 @@
  */
 
 import { Panel, ExplainBox } from '@/components/panels';
-import { useUiStore } from '@/store/uiStore';
+import { runDemo } from '@/services/demoScript';
 import {
   MempoolLanes,
   MevLegend,
@@ -33,7 +33,12 @@ const LIVE_BADGE = (
 );
 
 export function LiveSamplingPage() {
-  const setLensStage = useUiStore((s) => s.setLensStage);
+  // Run the full "放入显微镜" sequence (capture → fork → parse →
+  // ready → zooming → navigate to fork tab) so the user sees
+  // the entire microscope animation, not just the first frame.
+  const enterMicroscope = () => {
+    void runDemo('microscope');
+  };
 
   return (
     <div className="dtm-page dtm-page-live is-active" data-testid="live-page">
@@ -55,11 +60,7 @@ export function LiveSamplingPage() {
               >
                 <MevLegend />
                 <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                  <MempoolLanes
-                    onEnterMicroscope={() => {
-                      setLensStage('capture');
-                    }}
-                  />
+                  <MempoolLanes onEnterMicroscope={enterMicroscope} />
                 </div>
               </Panel>
             </div>

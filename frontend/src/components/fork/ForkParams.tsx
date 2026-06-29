@@ -4,12 +4,19 @@
  * Mirrors DTM_Demo.html lines 549-593.  Provides 5 sliders (block
  * number / pool depth / slippage tolerance / gas price / attacker
  * capital), a WETH ↔ USDC token pair display, and a "重放仿真" replay
- * button.  All state is held locally (useState) so the parent page
- * can lift it if needed.
+ * button.
+ *
+ * All slider state and the replay action live in the `forkStore`
+ * (Zustand) so the visualisation panels (ForkAmmPanel,
+ * ForkSankeyPanel, QuantResults, ForkConclusion) can subscribe and
+ * redraw whenever the user moves a slider or clicks "重放仿真".
+ *
+ * The legacy `onReplay` prop is preserved so that older tests
+ * (which mock the handler with `vi.fn()`) keep passing.
  */
 
-import { useState } from 'react';
 import { ParamSlider } from '@/components/panels';
+import { useForkStore } from '@/store/forkStore';
 
 export interface ForkParamsValues {
   block: number;
@@ -21,29 +28,23 @@ export interface ForkParamsValues {
 
 export interface ForkParamsProps {
   /** Called when the user clicks the "重放仿真" replay button. */
-  onReplay: (values: ForkParamsValues) => void;
-  /** Optional initial values. */
+  onReplay?: (values: ForkParamsValues) => void;
+  /** Optional initial values (only applied on first mount). */
   initial?: Partial<ForkParamsValues>;
   /** Optional test id for the root element. */
   testId?: string;
 }
 
-const DEFAULTS: ForkParamsValues = {
-  block: 22_180_542,
-  poolDepth: 1000,
-  slippage: 5,
-  gasPrice: 30,
-  attackerCapital: 50,
-};
+export function ForkParams({ onReplay, testId }: ForkParamsProps) {
+  const params = useForkStore((s) => s.params);
+  const replaying = useForkStore((s) => s.replaying);
+  const setParam = useForkStore((s) => s.setParam);
+  const replay = useForkStore((s) => s.replay);
 
-export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
-  const [block, setBlock] = useState<number>(initial?.block ?? DEFAULTS.block);
-  const [poolDepth, setPoolDepth] = useState<number>(initial?.poolDepth ?? DEFAULTS.poolDepth);
-  const [slippage, setSlippage] = useState<number>(initial?.slippage ?? DEFAULTS.slippage);
-  const [gasPrice, setGasPrice] = useState<number>(initial?.gasPrice ?? DEFAULTS.gasPrice);
-  const [attackerCapital, setAttackerCapital] = useState<number>(
-    initial?.attackerCapital ?? DEFAULTS.attackerCapital,
-  );
+  const handleReplay = () => {
+    replay();
+    onReplay?.(params);
+  };
 
   return (
     <div className="dtm-fork-params" data-testid={testId}>
@@ -52,8 +53,8 @@ export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
         min={18_000_000}
         max={30_000_000}
         step={1}
-        value={block}
-        onChange={setBlock}
+        value={params.block}
+        onChange={(v) => setParam('block', v)}
         suffix=""
       />
       <ParamSlider
@@ -61,8 +62,8 @@ export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
         min={500}
         max={10_000}
         step={50}
-        value={poolDepth}
-        onChange={setPoolDepth}
+        value={params.poolDepth}
+        onChange={(v) => setParam('poolDepth', v)}
         suffix=" WETH"
       />
       <ParamSlider
@@ -70,8 +71,8 @@ export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
         min={1}
         max={50}
         step={1}
-        value={slippage}
-        onChange={setSlippage}
+        value={params.slippage}
+        onChange={(v) => setParam('slippage', v)}
         suffix="%"
         precision={0}
       />
@@ -80,8 +81,8 @@ export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
         min={1}
         max={300}
         step={1}
-        value={gasPrice}
-        onChange={setGasPrice}
+        value={params.gasPrice}
+        onChange={(v) => setParam('gasPrice', v)}
         suffix=" gwei"
       />
       <ParamSlider
@@ -89,8 +90,8 @@ export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
         min={1}
         max={500}
         step={1}
-        value={attackerCapital}
-        onChange={setAttackerCapital}
+        value={params.attackerCapital}
+        onChange={(v) => setParam('attackerCapital', v)}
         suffix=" WETH"
       />
 
@@ -117,12 +118,13 @@ export function ForkParams({ onReplay, initial, testId }: ForkParamsProps) {
 
       <button
         type="button"
-        className="dtm-btn dtm-btn-primary"
-        onClick={() =>
-          onReplay({ block, poolDepth, slippage, gasPrice, attackerCapital })
-        }
+        className={`dtm-btn dtm-btn-primary${replaying ? ' is-replaying' : ''}`}
+        onClick={handleReplay}
+        data-testid="fork-replay-btn"
+        data-replaying={replaying ? 'true' : 'false'}
+        disabled={replaying}
       >
-        <span>▶</span> 重放仿真
+        <span>{replaying ? '⏳' : '▶'}</span> {replaying ? '仿真中…' : '重放仿真'}
       </button>
     </div>
   );
