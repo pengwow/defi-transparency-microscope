@@ -59,6 +59,18 @@ export function App() {
   const setPage = useUiStore((s) => s.setPage);
   const [ready, setReady] = useState(false);
 
+  // Switching the ModeBar to "Fork 实验切片" should also drop the
+  // user onto the Fork tab so the mode toggle feels like a real
+  // navigation, not a no-op state change.
+  const handleModeChange = (next: 'live' | 'replay') => {
+    setMode(next);
+    if (next === 'replay') {
+      setPage('fork');
+    } else {
+      setPage('live');
+    }
+  };
+
   // Initial data load.
   useEffect(() => {
     let cancelled = false;
@@ -208,7 +220,7 @@ export function App() {
           <Header
             onStartDemo={runDemoHandler('auto')}
             demoRunning={demoRunning}
-            right={<ModeBar value={mode} onChange={setMode} />}
+            right={<ModeBar value={mode} onChange={handleModeChange} />}
           />
           <NavTabs active={page} onSelect={setPage} />
           <main className="dtm-app-main" data-testid="app-main">

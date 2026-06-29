@@ -11,9 +11,18 @@
  * also wire up via the per-piece sub-components in this folder
  * (AddressInput, SimParams, etc.).  When the page rewires things it
  * imports the sub-components directly.
+ *
+ * The three ExperimentControls buttons (开始仿真 / 暂停 / 重置) are
+ * fully wired:
+ *   - 开始仿真  flips a `running` flag, kicks off a 1s interval
+ *                 that advances the `step` counter, and triggers
+ *                 RedAlert on step 0 to mark the simulation as live.
+ *   - 暂停       pauses the interval (state preserved).
+ *   - 重置       stops the interval, clears the step counter and
+ *                 dismisses any active RedAlert.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCanvas } from '@/canvas/useCanvas';
 import { setHfGauge } from '@/canvas/HfGauge';
 import { drawPriceHfCurve, type PriceHfPoint } from '@/canvas/PriceHfCurve';
@@ -23,6 +32,8 @@ import { ParamSlider } from '@/components/panels';
 const HF_MAX = 3;
 const HEIGHT_GAUGE = 200;
 const HEIGHT_CURVE = 220;
+const SIMULATION_INTERVAL_MS = 1_000;
+const MAX_STEPS = 8;
 
 /** Build a simple monotonic price→HF curve from the sliders. */
 function buildCurve(price: number, debt: number, collateral: number): PriceHfPoint[] {
@@ -49,6 +60,71 @@ export function FocusView({ testId = 'liquidation-focus-panel' }: FocusViewProps
   const setSlider = useLiquidationStore((s) => s.setSlider);
   const setFocusAddress = useLiquidationStore((s) => s.setFocusAddress);
   const setRedAlert = useLiquidationStore((s) => s.setRedAlert);
+  const dismissRedAlert = useLiquidationStore((s) => s.dismissRedAlert);
+
+  const [running, setRunning] = useState(false);
+  const [step, setStep] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Drive the simulation step counter while `running` is true.
+  useEffect(() => {
+    if (!running) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setStep((prev) => {
+        const next = prev + 1;
+        if (next >= MAX_STEPS) {
+          // Auto-stop at the end of the run.
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setRunning(false);
+        }
+        return Math.min(next, MAX_STEPS);
+      });
+    }, SIMULATION_INTERVAL_MS);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [running]);
+
+  const handleStart = () => {
+    if (running) return;
+    // Surface a RedAlert on (re-)start so the user can see the
+    // button press had an effect immediately, even before the first
+    // tick fires.
+    setRedAlert({
+      active: true,
+      title: '仿真进行中',
+      desc: `对焦地址 ${focusAddress || '0x…'} · 步数 ${step}/${MAX_STEPS}`,
+    });
+    setRunning(true);
+  };
+
+  const handlePause = () => {
+    if (!running) return;
+    setRunning(false);
+    setRedAlert({
+      active: true,
+      title: '已暂停',
+      desc: `步数停在 ${step}/${MAX_STEPS}`,
+    });
+  };
+
+  const handleReset = () => {
+    setRunning(false);
+    setStep(0);
+    dismissRedAlert();
+  };
 
   const curve = buildCurve(sliders.price, sliders.debt, sliders.collateral);
   // Compute the current HF for the gauge.
@@ -83,7 +159,9 @@ export function FocusView({ testId = 'liquidation-focus-panel' }: FocusViewProps
             type="button"
             className="dtm-address-search-btn"
             data-testid="liquidation-address-search"
-            onClick={() => setRedAlert({ active: true, title: '已对焦', desc: focusAddress })}
+            onClick={() =>
+              setRedAlert({ active: true, title: '已对焦', desc: focusAddress })
+            }
           >
             搜索
           </button>
@@ -138,9 +216,39 @@ export function FocusView({ testId = 'liquidation-focus-panel' }: FocusViewProps
         </div>
 
         <div className="dtm-experiment-controls" data-testid="liquidation-experiment-controls">
-          <button type="button" data-testid="liquidation-experiment-start">▶ 开始仿真</button>
-          <button type="button" data-testid="liquidation-experiment-pause">⏸ 暂停</button>
-          <button type="button" data-testid="liquidation-experiment-reset">↺ 重置</button>
+          <button
+            type="button"
+            className="dtm-experiment-btn dtm-experiment-btn-start"
+            data-testid="liquidation-experiment-start"
+            onClick={handleStart}
+            data-running={running}
+          >
+            ▶ 开始仿真
+          </button>
+          <button
+            type="button"
+            className="dtm-experiment-btn dtm-experiment-btn-pause"
+            data-testid="liquidation-experiment-pause"
+            onClick={handlePause}
+            disabled={!running}
+          >
+            ⏸ 暂停
+          </button>
+          <button
+            type="button"
+            className="dtm-experiment-btn dtm-experiment-btn-reset"
+            data-testid="liquidation-experiment-reset"
+            onClick={handleReset}
+          >
+            ↺ 重置
+          </button>
+        </div>
+        <div
+          className="dtm-experiment-step"
+          data-testid="liquidation-experiment-step"
+          data-step={step}
+        >
+          步数：{step}/{MAX_STEPS}
         </div>
       </div>
 
@@ -161,7 +269,13 @@ export function FocusView({ testId = 'liquidation-focus-panel' }: FocusViewProps
 
         <div className="dtm-hf-gauge-panel" data-testid="liquidation-hf-gauge-panel">
           <div className="dtm-hf-gauge-label">单地址 HF 仪表</div>
-          <div className="dtm-hf-gauge-readout">{hf.toFixed(2)}</div>
+          <div
+            className="dtm-hf-gauge-readout"
+            data-testid="liquidation-hf-gauge-readout"
+            data-step={step}
+          >
+            {hf.toFixed(2)}
+          </div>
           <div className="dtm-hf-gauge-level">{level.toUpperCase()}</div>
           <canvas
             ref={curveRef}
